@@ -6,6 +6,22 @@ import { IntegrationCard } from "./IntegrationCard"
 
 export const metadata: Metadata = { title: "Integrations" }
 
+const ERROR_MESSAGES: Record<string, string> = {
+  stripe_not_configured: "Stripe is not configured yet. Add STRIPE_CLIENT_ID and STRIPE_SECRET_KEY in Vercel environment variables.",
+  calendly_not_configured: "Calendly is not configured yet. Add CALENDLY_CLIENT_ID and CALENDLY_CLIENT_SECRET in Vercel environment variables.",
+  stripe_denied: "Stripe connection was denied or cancelled.",
+  stripe_token: "Failed to exchange Stripe token. Check your STRIPE_SECRET_KEY.",
+  stripe_failed: "Stripe connection failed. Please try again.",
+  calendly_denied: "Calendly connection was denied or cancelled.",
+  calendly_token: "Failed to exchange Calendly token. Check your credentials.",
+  calendly_failed: "Calendly connection failed. Please try again.",
+}
+
+const SUCCESS_MESSAGES: Record<string, string> = {
+  stripe: "Stripe connected successfully.",
+  calendly: "Calendly connected successfully.",
+}
+
 const INTEGRATIONS = [
   {
     provider: "STRIPE" as const,
@@ -45,9 +61,14 @@ const INTEGRATIONS = [
   },
 ]
 
-export default async function IntegrationsPage() {
+export default async function IntegrationsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string; success?: string }>
+}) {
   const session = await auth()
   const userId = session!.user.id
+  const { error, success } = await searchParams
 
   const connectedAccounts = await prisma.connectedAccount.findMany({
     where: { userId, status: "ACTIVE" },
@@ -81,6 +102,17 @@ export default async function IntegrationsPage() {
           Connect your platforms to start pulling funnel data.
         </p>
       </div>
+
+      {error && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-700">
+          {ERROR_MESSAGES[error] ?? "Something went wrong. Please try again."}
+        </div>
+      )}
+      {success && SUCCESS_MESSAGES[success] && (
+        <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-xs text-green-700">
+          {SUCCESS_MESSAGES[success]}
+        </div>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2">
         {INTEGRATIONS.map((integration) => {
