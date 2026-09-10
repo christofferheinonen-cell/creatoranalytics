@@ -1,10 +1,39 @@
 "use server"
 
-import { AuthError } from "next-auth"
-import { signIn } from "@/auth"
+import bcrypt from "bcryptjs"
+import { encode } from "next-auth/jwt"
+import { cookies } from "next/headers"
+import { redirect } from "next/navigation"
+import { prisma } from "@/lib/prisma"
 
 export interface LoginState {
   error: string | null
+}
+
+const COOKIE =
+  process.env.NODE_ENV === "production"
+    ? "__Secure-authjs.session-token"
+    : "authjs.session-token"
+
+async function createSession(userId: string, email: string, name: string | null) {
+  const secret = process.env.AUTH_SECRET
+  if (!secret) throw new Error("AUTH_SECRET is not set")
+
+  const token = await encode({
+    token: { sub: userId, id: userId, email, name },
+    secret,
+    salt: COOKIE,
+    maxAge: 30 * 24 * 60 * 60,
+  })
+
+  const jar = await cookies()
+  jar.set(COOKIE, token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: 30 * 24 * 60 * 60,
+  })
 }
 
 export async function loginAction(
@@ -18,19 +47,22 @@ export async function loginAction(
     return { error: "Email and password are required." }
   }
 
+  let userId: string
+  let name: string | null
+
   try {
-    // signIn throws a NEXT_REDIRECT on success — must re-throw it
-    await signIn("credentials", { email, password, redirectTo: "/" })
-  } catch (err) {
-    if (err instanceof AuthError) {
-      if (err.type === "CredentialsSignin") {
-        return { error: "Invalid email or password." }
-      }
-      return { error: "Something went wrong. Please try again." }
-    }
-    // Re-throw the redirect (not an auth error — it's the success path)
-    throw err
+    const user = await prisma.user.findUnique({ where: { email } })
+    if (!user?.passwordHash) return { error: "Invalid email or password." }
+
+    const valid = await bcrypt.compare(password, user.passwordHash)
+    if (!valid) return { error: "Invalid email or password." }
+
+    userId = user.id
+    name = user.name
+    await createSession(userId, email, name)
+  } catch {
+    return { error: "Something went wrong. Please try again." }
   }
 
-  return { error: null }
+  redirect("/")
 }

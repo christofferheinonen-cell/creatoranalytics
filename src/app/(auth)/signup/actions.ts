@@ -1,10 +1,15 @@
 "use server"
 
-import { AuthError } from "next-auth"
-import { signIn } from "@/auth"
 import bcrypt from "bcryptjs"
+import { encode } from "next-auth/jwt"
+import { cookies } from "next/headers"
+import { redirect } from "next/navigation"
 import { z } from "zod"
 import { prisma } from "@/lib/prisma"
+
+export interface SignupState {
+  error: string | null
+}
 
 const RegisterSchema = z.object({
   name: z.string().min(1).max(100),
@@ -12,8 +17,30 @@ const RegisterSchema = z.object({
   password: z.string().min(8).max(128),
 })
 
-export interface SignupState {
-  error: string | null
+const COOKIE =
+  process.env.NODE_ENV === "production"
+    ? "__Secure-authjs.session-token"
+    : "authjs.session-token"
+
+async function createSession(userId: string, email: string, name: string | null) {
+  const secret = process.env.AUTH_SECRET
+  if (!secret) throw new Error("AUTH_SECRET is not set")
+
+  const token = await encode({
+    token: { sub: userId, id: userId, email, name },
+    secret,
+    salt: COOKIE,
+    maxAge: 30 * 24 * 60 * 60,
+  })
+
+  const jar = await cookies()
+  jar.set(COOKIE, token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: 30 * 24 * 60 * 60,
+  })
 }
 
 export async function signupAction(
@@ -29,6 +56,8 @@ export async function signupAction(
     return { error: "Invalid input. Email must be valid and password at least 8 characters." }
   }
 
+  let userId: string
+
   try {
     const existing = await prisma.user.findUnique({ where: { email: parsed.data.email } })
     if (existing) {
@@ -36,21 +65,15 @@ export async function signupAction(
     }
 
     const passwordHash = await bcrypt.hash(parsed.data.password, 12)
-    await prisma.user.create({
+    const user = await prisma.user.create({
       data: { name: parsed.data.name, email: parsed.data.email, passwordHash },
     })
+
+    userId = user.id
+    await createSession(userId, parsed.data.email, parsed.data.name)
   } catch {
     return { error: "Something went wrong. Please try again." }
   }
 
-  try {
-    await signIn("credentials", { email, password, redirectTo: "/" })
-  } catch (err) {
-    if (err instanceof AuthError) {
-      return { error: "Account created but sign-in failed. Please log in manually." }
-    }
-    throw err
-  }
-
-  return { error: null }
+  redirect("/")
 }
