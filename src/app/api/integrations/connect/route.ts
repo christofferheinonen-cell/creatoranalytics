@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma"
 import { encrypt } from "@/lib/encrypt"
 
 const Schema = z.object({
-  provider: z.enum(["KIT", "MANYCHAT"]),
+  provider: z.enum(["STRIPE", "KIT", "MANYCHAT"]),
   apiKey: z.string().min(1),
 })
 

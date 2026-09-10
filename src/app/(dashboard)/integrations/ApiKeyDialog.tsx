@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dialog"
 
 interface Props {
-  provider: "KIT" | "MANYCHAT"
+  provider: "STRIPE" | "KIT" | "MANYCHAT"
   label: string
   docsUrl: string
   open: boolean

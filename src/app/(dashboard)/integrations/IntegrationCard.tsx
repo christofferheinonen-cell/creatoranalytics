@@ -165,7 +165,7 @@ export function IntegrationCard({
 
       {authType === "apikey" && (
         <ApiKeyDialog
-          provider={provider as "KIT" | "MANYCHAT"}
+          provider={provider as "STRIPE" | "KIT" | "MANYCHAT"}
           label={label}
           docsUrl={docsUrl}
           open={dialogOpen}
