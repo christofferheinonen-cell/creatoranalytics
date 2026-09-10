@@ -89,13 +89,13 @@ export default async function DashboardPage() {
   const revenueChartData = groupByWeek(revenueEvents)
 
   // Build funnel stage arrays from real event counts
-  const countByType = new Map(funnelCounts.map((r) => [r.type, r._count.id]))
-  const sourceByType = new Map(funnelCounts.map((r) => [r.type, r.source.toLowerCase()]))
+  const countByType = new Map<string, number>(funnelCounts.map((r) => [r.type as string, r._count.id]))
+  const sourceByType = new Map<string, string>(funnelCounts.map((r) => [r.type as string, r.source.toLowerCase()]))
 
   function makeStage(type: string, label: string): FunnelStage | null {
-    const count = countByType.get(type as keyof typeof countByType)
+    const count = countByType.get(type)
     if (!count) return null
-    return { stage: type, label, count, source: sourceByType.get(type as keyof typeof sourceByType) ?? "" }
+    return { stage: type, label, count, source: sourceByType.get(type) ?? "" }
   }
 
   const freebbieFunnel = [

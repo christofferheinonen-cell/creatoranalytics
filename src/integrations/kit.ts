@@ -1,10 +1,9 @@
 // Kit (ConvertKit) integration — syncs email subscribers to FunnelEvents
-// Real API docs: https://developers.kit.com/docs
-// Auth: API key (no OAuth) — creator pastes their API key in the UI
+// API docs: https://developers.kit.com/docs
+// Auth: Bearer token (API key)
 
+import { prisma } from "@/lib/prisma"
 import type { SyncResult } from "@/types"
-
-// ─── API response shapes ──────────────────────────────────────────────────────
 
 interface KitSubscriber {
   id: number
@@ -12,27 +11,43 @@ interface KitSubscriber {
   email_address: string
   state: "active" | "inactive" | "cancelled" | "bounced" | "complained"
   created_at: string // ISO 8601
-  fields: Record<string, string | null>
 }
 
-interface KitListSubscribersResponse {
-  total_subscribers: number
-  page: number
-  total_pages: number
+interface KitListResponse {
   subscribers: KitSubscriber[]
+  pagination: {
+    has_next_page: boolean
+    end_cursor: string | null
+  }
 }
 
-// ─── API key validation ───────────────────────────────────────────────────────
+async function fetchSubscribers(
+  apiKey: string,
+  sinceTimestamp?: Date,
+  afterCursor?: string
+): Promise<KitListResponse> {
+  const params = new URLSearchParams({ per_page: "1000" })
+  if (sinceTimestamp) {
+    params.set("created_after", sinceTimestamp.toISOString())
+  }
+  if (afterCursor) {
+    params.set("after", afterCursor)
+  }
 
-export async function validateKitApiKey(apiKey: string): Promise<boolean> {
-  // TODO: Real call to https://api.kit.com/v4/account?api_key={key}
-  // Returns 200 with account info if valid, 401 if not.
+  const res = await fetch(`https://api.kit.com/v4/subscribers?${params}`, {
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "X-Kit-Api-Key": apiKey,
+    },
+  })
 
-  // Mock: any non-empty key is "valid" in dev
-  return apiKey.length > 10
+  if (!res.ok) {
+    const err = (await res.json()) as { message?: string }
+    throw new Error(err.message ?? `Kit API error ${res.status}`)
+  }
+
+  return res.json() as Promise<KitListResponse>
 }
-
-// ─── Sync function ────────────────────────────────────────────────────────────
 
 export async function syncKit(
   connectedAccountId: string,
@@ -40,32 +55,77 @@ export async function syncKit(
   userId: string,
   sinceTimestamp?: Date
 ): Promise<SyncResult> {
-  // TODO: Replace with real Kit API calls once credentials are available.
-  //
-  // Real implementation pattern:
-  //   const baseUrl = "https://api.kit.com/v4"
-  //   page through GET /subscribers?api_key={key}&from={sinceISO}
-  //   For each subscriber with state "active":
-  //     upsert Contact by email, write FunnelEvent(SUBSCRIBED)
-  //   For state "cancelled":
-  //     write FunnelEvent(UNSUBSCRIBED)
+  let eventsIngested = 0
+  const errors: string[] = []
+  let afterCursor: string | undefined
+  let hasMore = true
 
-  const mockSubscribers: KitSubscriber[] = [
-    {
-      id: 10001,
-      first_name: "Sarah",
-      email_address: "sarah.chen@gmail.com",
-      state: "active",
-      created_at: new Date(Date.now() - 86400000 * 30).toISOString(),
-      fields: {},
-    },
-  ]
+  while (hasMore) {
+    const page = await fetchSubscribers(apiKey, sinceTimestamp, afterCursor)
 
-  void mockSubscribers
+    for (const subscriber of page.subscribers) {
+      try {
+        const email = subscriber.email_address
+        if (!email) continue
 
-  return {
-    success: true,
-    eventsIngested: 0,
-    errors: [],
+        const eventType = subscriber.state === "active" ? "SUBSCRIBED" : "UNSUBSCRIBED"
+        const timestamp = new Date(subscriber.created_at)
+
+        // Find or create contact
+        let contact = await prisma.contact.findFirst({ where: { userId, email } })
+        if (!contact) {
+          contact = await prisma.contact.create({
+            data: {
+              userId,
+              email,
+              name: subscriber.first_name ?? undefined,
+              kitSubscriberId: String(subscriber.id),
+              currentStage: eventType === "SUBSCRIBED" ? "SUBSCRIBED" : undefined,
+            },
+          })
+        } else if (!contact.kitSubscriberId) {
+          await prisma.contact.update({
+            where: { id: contact.id },
+            data: {
+              kitSubscriberId: String(subscriber.id),
+              currentStage: eventType === "SUBSCRIBED" ? "SUBSCRIBED" : contact.currentStage,
+            },
+          })
+        }
+
+        // Idempotent: check for existing event with this kit_subscriber_id
+        const existing = await prisma.funnelEvent.findFirst({
+          where: {
+            contactId: contact.id,
+            type: eventType,
+            metadata: { path: ["kit_subscriber_id"], equals: subscriber.id },
+          },
+        })
+
+        if (!existing) {
+          await prisma.funnelEvent.create({
+            data: {
+              contactId: contact.id,
+              userId,
+              type: eventType,
+              source: "KIT",
+              timestamp,
+              metadata: {
+                kit_subscriber_id: subscriber.id,
+                state: subscriber.state,
+              },
+            },
+          })
+          eventsIngested++
+        }
+      } catch (err) {
+        errors.push(`Subscriber ${subscriber.id}: ${err instanceof Error ? err.message : String(err)}`)
+      }
+    }
+
+    hasMore = page.pagination.has_next_page
+    afterCursor = page.pagination.end_cursor ?? undefined
   }
+
+  return { success: errors.length === 0, eventsIngested, errors }
 }
