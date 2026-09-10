@@ -8,12 +8,7 @@ import { RevenueChart } from "@/components/dashboard/RevenueChart"
 import { ConnectedSources } from "@/components/dashboard/ConnectedSources"
 import { StatCard } from "@/components/shared/StatCard"
 import { pctChange, formatNumber } from "@/lib/utils"
-import {
-  MOCK_FREEBIE_FUNNEL,
-  MOCK_CALL_FUNNEL,
-  MOCK_COMBINED_FUNNEL,
-} from "@/lib/mock-data"
-import type { ConnectedAccountSummary, Provider } from "@/types"
+import type { ConnectedAccountSummary, FunnelStage, Provider } from "@/types"
 
 export const metadata: Metadata = { title: "Dashboard" }
 
@@ -54,6 +49,7 @@ export default async function DashboardPage() {
     callsBooked,
     revenueEvents,
     connectedAccounts,
+    funnelCounts,
   ] = await Promise.all([
     prisma.funnelEvent.aggregate({
       where: { userId, type: "PURCHASED", timestamp: { gte: thirtyDaysAgo } },
@@ -78,6 +74,11 @@ export default async function DashboardPage() {
       where: { userId },
       select: { provider: true, status: true, lastSyncedAt: true },
     }),
+    prisma.funnelEvent.groupBy({
+      by: ["type", "source"],
+      where: { userId },
+      _count: { id: true },
+    }),
   ])
 
   const totalRevenue = currentRevenue._sum.value?.toNumber() ?? 0
@@ -86,6 +87,41 @@ export default async function DashboardPage() {
   const revenueTrend = pctChange(totalRevenue, prevRevenue)
 
   const revenueChartData = groupByWeek(revenueEvents)
+
+  // Build funnel stage arrays from real event counts
+  const countByType = new Map(funnelCounts.map((r) => [r.type, r._count.id]))
+  const sourceByType = new Map(funnelCounts.map((r) => [r.type, r.source.toLowerCase()]))
+
+  function makeStage(type: string, label: string): FunnelStage | null {
+    const count = countByType.get(type as keyof typeof countByType)
+    if (!count) return null
+    return { stage: type, label, count, source: sourceByType.get(type as keyof typeof sourceByType) ?? "" }
+  }
+
+  const freebbieFunnel = [
+    makeStage("COMMENT", "Social Comment"),
+    makeStage("DM_STARTED", "DM Started"),
+    makeStage("FREEBIE_CLAIMED", "Freebie Claimed"),
+    makeStage("SUBSCRIBED", "Email Subscribed"),
+    makeStage("PURCHASED", "Purchased"),
+  ].filter(Boolean) as FunnelStage[]
+
+  const callFunnel = [
+    makeStage("COMMENT", "Social Comment"),
+    makeStage("DM_STARTED", "DM Started"),
+    makeStage("LINK_CLICKED", "Video Viewed"),
+    makeStage("CALL_SCHEDULED", "Call Booked"),
+    makeStage("CALL_COMPLETED", "Call Completed"),
+    makeStage("PURCHASED", "Purchased"),
+  ].filter(Boolean) as FunnelStage[]
+
+  const combinedFunnel = [
+    makeStage("COMMENT", "Social Comment"),
+    makeStage("DM_STARTED", "DM Started"),
+    makeStage("SUBSCRIBED", "Email Subscribed"),
+    makeStage("CALL_SCHEDULED", "Call Booked"),
+    makeStage("PURCHASED", "Purchased"),
+  ].filter(Boolean) as FunnelStage[]
 
   const integrations: ConnectedAccountSummary[] = connectedAccounts.map((a) => ({
     provider: a.provider,
@@ -137,9 +173,9 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <FunnelChart
-            freebbieFunnel={MOCK_FREEBIE_FUNNEL}
-            callFunnel={MOCK_CALL_FUNNEL}
-            combinedFunnel={MOCK_COMBINED_FUNNEL}
+            freebbieFunnel={freebbieFunnel}
+            callFunnel={callFunnel}
+            combinedFunnel={combinedFunnel}
           />
         </div>
         <ConnectedSources accounts={integrations} />

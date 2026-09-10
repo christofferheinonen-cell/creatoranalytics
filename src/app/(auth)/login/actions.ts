@@ -23,7 +23,7 @@ async function createSession(userId: string, email: string, name: string | null)
     token: { sub: userId, id: userId, email, name },
     secret,
     salt: COOKIE,
-    maxAge: 30 * 24 * 60 * 60,
+    maxAge: 90 * 24 * 60 * 60,
   })
 
   const jar = await cookies()
@@ -32,7 +32,7 @@ async function createSession(userId: string, email: string, name: string | null)
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    maxAge: 30 * 24 * 60 * 60,
+    maxAge: 90 * 24 * 60 * 60,
   })
 }
 
