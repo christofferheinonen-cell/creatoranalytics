@@ -1,103 +1,148 @@
 // Stripe integration — syncs customers and charges to FunnelEvents
-// Real API docs: https://stripe.com/docs/api
-// Auth: OAuth via Stripe Connect (creator connects their own Stripe account)
 
+import { prisma } from "@/lib/prisma"
 import type { SyncResult } from "@/types"
-
-// ─── API response shapes (matching actual Stripe objects) ─────────────────────
-
-interface StripeCustomer {
-  id: string
-  email: string | null
-  name: string | null
-  created: number // Unix timestamp
-  metadata: Record<string, string>
-}
 
 interface StripeCharge {
   id: string
   customer: string | null
   amount: number // in cents
   currency: string
-  created: number
+  created: number // Unix timestamp
   status: "succeeded" | "pending" | "failed"
   refunded: boolean
   receipt_email: string | null
-  metadata: Record<string, string>
 }
 
 interface StripeListResponse<T> {
-  object: "list"
   data: T[]
   has_more: boolean
-  url: string
 }
 
-// ─── Sync function ────────────────────────────────────────────────────────────
+async function fetchCharges(
+  apiKey: string,
+  sinceTimestamp?: Date,
+  startingAfter?: string
+): Promise<StripeListResponse<StripeCharge>> {
+  const params = new URLSearchParams({ limit: "100" })
+  if (sinceTimestamp) {
+    params.set("created[gte]", Math.floor(sinceTimestamp.getTime() / 1000).toString())
+  }
+  if (startingAfter) {
+    params.set("starting_after", startingAfter)
+  }
+
+  const res = await fetch(`https://api.stripe.com/v1/charges?${params}`, {
+    headers: { Authorization: `Bearer ${apiKey}` },
+  })
+
+  if (!res.ok) {
+    const err = (await res.json()) as { error?: { message?: string } }
+    throw new Error(err.error?.message ?? `Stripe API error ${res.status}`)
+  }
+
+  return res.json() as Promise<StripeListResponse<StripeCharge>>
+}
 
 export async function syncStripe(
   connectedAccountId: string,
-  accessToken: string,
+  apiKey: string,
   userId: string,
   sinceTimestamp?: Date
 ): Promise<SyncResult> {
-  // TODO: Replace mock data with real Stripe API calls once credentials are available.
-  // Real implementation pattern:
-  //
-  //   const charges = await fetchAllPages<StripeCharge>(
-  //     accessToken,
-  //     "https://api.stripe.com/v1/charges",
-  //     { created: { gte: sinceUnix }, limit: 100 }
-  //   )
-  //
-  // For each charge: upsert Contact by email, write FunnelEvent(PURCHASED or REFUNDED).
-  // For refunds: charge.refunded === true → write FunnelEvent(REFUNDED).
-  //
-  // KNOWN SOFT SPOT (call funnel): A Stripe customer who paid during/after a call
-  // is joined back to a Contact via email only — there is no checkout-session metadata
-  // linking them to the Calendly invitee. This is a best-effort match in v1.
+  let eventsIngested = 0
+  const errors: string[] = []
+  let startingAfter: string | undefined
+  let hasMore = true
 
-  const mockCharges: StripeCharge[] = [
-    {
-      id: "ch_mock_001",
-      customer: "cus_mock_001",
-      amount: 240000,
-      currency: "usd",
-      created: Date.now() / 1000 - 86400,
-      status: "succeeded",
-      refunded: false,
-      receipt_email: "sarah.chen@gmail.com",
-      metadata: {},
-    },
-  ]
+  while (hasMore) {
+    const page = await fetchCharges(apiKey, sinceTimestamp, startingAfter)
 
-  void mockCharges // will be used in real implementation
+    for (const charge of page.data) {
+      try {
+        if (charge.status !== "succeeded") continue
+        const email = charge.receipt_email
+        if (!email) continue
 
-  return {
-    success: true,
-    eventsIngested: 0,
-    errors: [],
+        // Find or create contact
+        let contact = await prisma.contact.findFirst({ where: { userId, email } })
+        if (!contact) {
+          contact = await prisma.contact.create({
+            data: {
+              userId,
+              email,
+              stripeCustomerId: charge.customer ?? undefined,
+              currentStage: "PURCHASED",
+            },
+          })
+        } else if (charge.customer && !contact.stripeCustomerId) {
+          await prisma.contact.update({
+            where: { id: contact.id },
+            data: { stripeCustomerId: charge.customer, currentStage: "PURCHASED" },
+          })
+        }
+
+        // Upsert PURCHASED event (idempotent by stripe_charge_id in metadata)
+        const existingPurchase = await prisma.funnelEvent.findFirst({
+          where: {
+            contactId: contact.id,
+            type: "PURCHASED",
+            metadata: { path: ["stripe_charge_id"], equals: charge.id },
+          },
+        })
+
+        if (!existingPurchase) {
+          await prisma.funnelEvent.create({
+            data: {
+              contactId: contact.id,
+              userId,
+              type: "PURCHASED",
+              source: "STRIPE",
+              timestamp: new Date(charge.created * 1000),
+              value: charge.amount / 100,
+              metadata: { stripe_charge_id: charge.id, currency: charge.currency },
+            },
+          })
+          eventsIngested++
+        }
+
+        // Write REFUNDED event if charge was refunded
+        if (charge.refunded) {
+          const existingRefund = await prisma.funnelEvent.findFirst({
+            where: {
+              contactId: contact.id,
+              type: "REFUNDED",
+              metadata: { path: ["stripe_charge_id"], equals: charge.id },
+            },
+          })
+
+          if (!existingRefund) {
+            await prisma.funnelEvent.create({
+              data: {
+                contactId: contact.id,
+                userId,
+                type: "REFUNDED",
+                source: "STRIPE",
+                timestamp: new Date(charge.created * 1000),
+                value: charge.amount / 100,
+                metadata: { stripe_charge_id: charge.id, currency: charge.currency },
+              },
+            })
+            eventsIngested++
+          }
+        }
+      } catch (err) {
+        errors.push(`Charge ${charge.id}: ${err instanceof Error ? err.message : String(err)}`)
+      }
+    }
+
+    hasMore = page.has_more
+    if (page.data.length > 0 && hasMore) {
+      startingAfter = page.data[page.data.length - 1].id
+    } else {
+      hasMore = false
+    }
   }
-}
 
-// ─── OAuth helpers ────────────────────────────────────────────────────────────
-
-export function getStripeConnectUrl(state: string): string {
-  const params = new URLSearchParams({
-    response_type: "code",
-    client_id: process.env.STRIPE_CLIENT_ID ?? "",
-    scope: "read_only",
-    state,
-    redirect_uri: `${process.env.NEXTAUTH_URL}/api/integrations/stripe/callback`,
-  })
-  return `https://connect.stripe.com/oauth/authorize?${params.toString()}`
-}
-
-export async function exchangeStripeCode(code: string): Promise<{
-  accessToken: string
-  refreshToken: string | null
-  stripeUserId: string
-}> {
-  // TODO: Real exchange against https://connect.stripe.com/oauth/token
-  throw new Error("Stripe OAuth exchange not yet implemented — add real credentials first")
+  return { success: errors.length === 0, eventsIngested, errors }
 }

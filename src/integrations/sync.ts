@@ -1,8 +1,7 @@
 // Sync orchestrator — called from /api/sync or a future cron job
-// Structured to be scheduler-agnostic: the exported function runs the sync logic,
-// the route handler or scheduler decides when to invoke it.
 
 import { prisma } from "@/lib/prisma"
+import { decrypt } from "@/lib/encrypt"
 import { syncStripe } from "./stripe"
 import { syncKit } from "./kit"
 import { syncManyChat } from "./manychat"
@@ -21,10 +20,7 @@ export async function runSyncForAccount(
   }
 
   const log = await prisma.syncLog.create({
-    data: {
-      connectedAccountId,
-      status: "RUNNING",
-    },
+    data: { connectedAccountId, status: "RUNNING" },
   })
 
   let result: SyncResult = { success: false, eventsIngested: 0, errors: [] }
@@ -34,20 +30,20 @@ export async function runSyncForAccount(
 
     switch (account.provider) {
       case "STRIPE":
-        if (!account.accessToken) throw new Error("No access token for Stripe")
-        result = await syncStripe(account.id, account.accessToken, account.userId, since)
+        if (!account.apiKey) throw new Error("No API key for Stripe")
+        result = await syncStripe(account.id, await decrypt(account.apiKey), account.userId, since)
         break
       case "KIT":
         if (!account.apiKey) throw new Error("No API key for Kit")
-        result = await syncKit(account.id, account.apiKey, account.userId, since)
+        result = await syncKit(account.id, await decrypt(account.apiKey), account.userId, since)
         break
       case "MANYCHAT":
         if (!account.apiKey) throw new Error("No API key for ManyChat")
-        result = await syncManyChat(account.id, account.apiKey, account.userId, since)
+        result = await syncManyChat(account.id, await decrypt(account.apiKey), account.userId, since)
         break
       case "CALENDLY":
         if (!account.accessToken) throw new Error("No access token for Calendly")
-        result = await syncCalendly(account.id, account.accessToken, account.userId, since)
+        result = await syncCalendly(account.id, await decrypt(account.accessToken), account.userId, since)
         break
       default:
         throw new Error(`Unknown provider: ${account.provider as string}`)
@@ -72,11 +68,7 @@ export async function runSyncForAccount(
     const message = err instanceof Error ? err.message : String(err)
     await prisma.syncLog.update({
       where: { id: log.id },
-      data: {
-        status: "FAILED",
-        completedAt: new Date(),
-        errors: [message],
-      },
+      data: { status: "FAILED", completedAt: new Date(), errors: [message] },
     })
     await prisma.connectedAccount.update({
       where: { id: connectedAccountId },
