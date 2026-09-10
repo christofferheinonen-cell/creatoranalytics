@@ -144,9 +144,8 @@ export default async function IntegrationsPage({
           ) : (
             <div className="flex flex-col divide-y divide-border">
               {syncLogs.map((log) => {
-                const provider = accountMap.get(
-                  [...accountMap.entries()].find(([, a]) => a.id === log.connectedAccountId)?.[0] ?? ""
-                )
+                const providerKey = [...accountMap.entries()].find(([, a]) => a.id === log.connectedAccountId)?.[0]
+                const provider = providerKey ? accountMap.get(providerKey) : undefined
                 const errorMsg = log.errors
                   ? typeof log.errors === "string"
                     ? log.errors
