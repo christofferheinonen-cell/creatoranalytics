@@ -58,20 +58,32 @@ export function ApiKeyDialog({ provider, label, docsUrl, open, onOpenChange, onS
         <DialogHeader>
           <DialogTitle>Connect {label}</DialogTitle>
           <DialogDescription>
-            Paste your API key from{" "}
-            <a href={docsUrl} target="_blank" rel="noreferrer" className="underline">
-              {label} settings
-            </a>
-            .
+            {provider === "KIT" ? (
+              <>
+                Paste your <strong>API Secret</strong> from{" "}
+                <a href={docsUrl} target="_blank" rel="noreferrer" className="underline">
+                  Kit → Settings → Advanced → API
+                </a>
+                . Use the <em>API Secret</em>, not the API Key.
+              </>
+            ) : (
+              <>
+                Paste your API key from{" "}
+                <a href={docsUrl} target="_blank" rel="noreferrer" className="underline">
+                  {label} settings
+                </a>
+                .
+              </>
+            )}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4 pt-1">
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="apikey">API Key</Label>
+            <Label htmlFor="apikey">{provider === "KIT" ? "API Secret" : "API Key"}</Label>
             <Input
               id="apikey"
               type="password"
-              placeholder="Paste key here"
+              placeholder={provider === "KIT" ? "Paste API Secret here" : "Paste key here"}
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
               required
