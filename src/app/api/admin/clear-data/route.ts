@@ -1,19 +1,21 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextResponse } from "next/server"
+import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
 
 export const dynamic = "force-dynamic"
 
-// Deletes all FunnelEvents and Contacts for every user.
-// Protected by CRON_SECRET — call once to wipe seeded/fake data.
-export async function POST(req: NextRequest) {
-  const authHeader = req.headers.get("authorization")
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+// Deletes all FunnelEvents and Contacts for the authenticated user.
+export async function POST() {
+  const session = await auth()
+  if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
+  const userId = session.user.id
+
   const [deletedEvents, deletedContacts] = await prisma.$transaction([
-    prisma.funnelEvent.deleteMany({}),
-    prisma.contact.deleteMany({}),
+    prisma.funnelEvent.deleteMany({ where: { userId } }),
+    prisma.contact.deleteMany({ where: { userId } }),
   ])
 
   return NextResponse.json({

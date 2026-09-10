@@ -3,6 +3,7 @@ import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { IntegrationCard } from "./IntegrationCard"
+import { ClearDataButton } from "./ClearDataButton"
 
 export const metadata: Metadata = { title: "Integrations" }
 
@@ -128,6 +129,16 @@ export default async function IntegrationsPage({
           )
         })}
       </div>
+
+      <Card className="border-red-200">
+        <CardHeader>
+          <CardTitle className="text-red-700">Danger Zone</CardTitle>
+          <CardDescription>Permanently delete all contacts and funnel events from your account. Use this to wipe test or seeded data before going live.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ClearDataButton />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
