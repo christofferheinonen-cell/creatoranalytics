@@ -1,0 +1,57 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Maps to our design token palette */
+    --background: 210 40% 98%;          /* #F8FAFC surface-page */
+    --foreground: 222 47% 11%;          /* #0F172A brand-navy */
+
+    --card: 0 0% 100%;                  /* white */
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    --primary: 239 84% 67%;             /* #6366F1 indigo-500 */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 210 40% 96%;           /* #F1F5F9 surface-subtle */
+    --secondary-foreground: 222 47% 11%;
+
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;    /* #64748B */
+
+    --accent: 174 84% 39%;             /* #14B8A6 teal */
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 214 32% 91%;             /* #E2E8F0 */
+    --input: 214 32% 91%;
+    --ring: 239 84% 67%;
+
+    --radius: 0.625rem;                /* 10px */
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-[#F8FAFC] text-foreground antialiased;
+    font-family: "Inter", system-ui, -apple-system, sans-serif;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Smooth focus rings */
+  :focus-visible {
+    @apply outline-none ring-2 ring-brand-indigo-500 ring-offset-2;
+  }
+}
+
+/* Inter font — loaded via Google Fonts in layout.tsx */
