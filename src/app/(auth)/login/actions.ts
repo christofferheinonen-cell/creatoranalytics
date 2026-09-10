@@ -16,8 +16,8 @@ const COOKIE =
     : "authjs.session-token"
 
 async function createSession(userId: string, email: string, name: string | null) {
-  const secret = process.env.AUTH_SECRET
-  if (!secret) throw new Error("AUTH_SECRET is not set")
+  const secret = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET
+  if (!secret) throw new Error(`AUTH_SECRET is not set (checked AUTH_SECRET and NEXTAUTH_SECRET)`)
 
   const token = await encode({
     token: { sub: userId, id: userId, email, name },
