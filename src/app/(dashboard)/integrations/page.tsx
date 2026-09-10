@@ -64,10 +64,10 @@ export default async function IntegrationsPage() {
       id: true,
       status: true,
       startedAt: true,
-      finishedAt: true,
+      completedAt: true,
       eventsIngested: true,
-      error: true,
-      connectedAccount: { select: { provider: true } },
+      errors: true,
+      connectedAccountId: true,
     },
   })
 
@@ -111,33 +111,43 @@ export default async function IntegrationsPage() {
             </div>
           ) : (
             <div className="flex flex-col divide-y divide-border">
-              {syncLogs.map((log) => (
-                <div key={log.id} className="flex items-center justify-between py-3 text-xs">
-                  <div className="flex items-center gap-3">
-                    <span
-                      className={`inline-flex h-2 w-2 rounded-full ${
-                        log.status === "SUCCESS"
-                          ? "bg-green-500"
-                          : log.status === "RUNNING"
-                          ? "bg-yellow-500"
-                          : "bg-red-500"
-                      }`}
-                    />
-                    <span className="font-medium text-brand-navy">
-                      {log.connectedAccount.provider}
-                    </span>
+              {syncLogs.map((log) => {
+                const provider = accountMap.get(
+                  [...accountMap.entries()].find(([, a]) => a.id === log.connectedAccountId)?.[0] ?? ""
+                )
+                const errorMsg = log.errors
+                  ? typeof log.errors === "string"
+                    ? log.errors
+                    : JSON.stringify(log.errors)
+                  : null
+                return (
+                  <div key={log.id} className="flex items-center justify-between py-3 text-xs">
+                    <div className="flex items-center gap-3">
+                      <span
+                        className={`inline-flex h-2 w-2 rounded-full ${
+                          log.status === "SUCCESS"
+                            ? "bg-green-500"
+                            : log.status === "RUNNING"
+                            ? "bg-yellow-500"
+                            : "bg-red-500"
+                        }`}
+                      />
+                      <span className="font-medium text-brand-navy">
+                        {provider?.provider ?? log.connectedAccountId}
+                      </span>
+                      <span className="text-muted-foreground">
+                        {log.eventsIngested ?? 0} events
+                      </span>
+                      {errorMsg && (
+                        <span className="truncate max-w-[200px] text-red-600">{errorMsg}</span>
+                      )}
+                    </div>
                     <span className="text-muted-foreground">
-                      {log.eventsIngested ?? 0} events
+                      {new Date(log.startedAt).toLocaleString()}
                     </span>
-                    {log.error && (
-                      <span className="truncate max-w-[200px] text-red-600">{log.error}</span>
-                    )}
                   </div>
-                  <span className="text-muted-foreground">
-                    {new Date(log.startedAt).toLocaleString()}
-                  </span>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </CardContent>
