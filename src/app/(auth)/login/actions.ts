@@ -60,8 +60,8 @@ export async function loginAction(
     userId = user.id
     name = user.name
     await createSession(userId, email, name)
-  } catch {
-    return { error: "Something went wrong. Please try again." }
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Unknown error" }
   }
 
   redirect("/")

@@ -71,8 +71,8 @@ export async function signupAction(
 
     userId = user.id
     await createSession(userId, parsed.data.email, parsed.data.name)
-  } catch {
-    return { error: "Something went wrong. Please try again." }
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Unknown error" }
   }
 
   redirect("/")
