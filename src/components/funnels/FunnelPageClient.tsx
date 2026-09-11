@@ -468,12 +468,7 @@ export function FunnelPageClient({ initialFunnels, eventCounts }: FunnelPageClie
             {!isSystem && (
               <button
                 onClick={openBuilder}
-                className={cn(
-                  "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-                  panelMode === "builder"
-                    ? "bg-brand-indigo-50 text-brand-indigo-600"
-                    : "text-muted-foreground hover:text-brand-navy"
-                )}
+                className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-brand-navy"
               >
                 <Wrench className="h-3.5 w-3.5" />
                 Edit funnel
