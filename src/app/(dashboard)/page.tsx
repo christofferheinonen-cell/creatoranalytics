@@ -43,6 +43,7 @@ export default async function DashboardPage() {
   const [
     currentRevenue,
     previousRevenue,
+    transactionCount,
     totalContacts,
     previousContacts,
     activeSubscribers,
@@ -58,6 +59,9 @@ export default async function DashboardPage() {
     prisma.funnelEvent.aggregate({
       where: { userId, type: "PURCHASED", timestamp: { gte: sixtyDaysAgo, lt: thirtyDaysAgo } },
       _sum: { value: true },
+    }),
+    prisma.funnelEvent.count({
+      where: { userId, type: "PURCHASED", timestamp: { gte: thirtyDaysAgo } },
     }),
     prisma.contact.count({ where: { userId } }),
     prisma.contact.count({ where: { userId, createdAt: { lt: thirtyDaysAgo } } }),
@@ -140,7 +144,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-5 animate-fade-in">
-      <HeroCard totalRevenue={totalRevenue} previousRevenue={prevRevenue} />
+      <HeroCard totalRevenue={totalRevenue} previousRevenue={prevRevenue} transactionCount={transactionCount} />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard

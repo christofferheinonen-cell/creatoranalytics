@@ -10,6 +10,8 @@ import {
   ResponsiveContainer,
 } from "recharts"
 import { ChartCard } from "@/components/shared/ChartCard"
+import { EmptyState } from "@/components/shared/EmptyState"
+import { BarChart2 } from "lucide-react"
 import { formatCurrency } from "@/lib/utils"
 
 interface RevenueDataPoint {
@@ -41,6 +43,18 @@ interface RevenueChartProps {
 
 export function RevenueChart({ data }: RevenueChartProps) {
   const total = data.reduce((sum, d) => sum + d.revenue, 0)
+
+  if (data.length === 0) {
+    return (
+      <ChartCard title="Revenue Over Time" description="Last 12 weeks">
+        <EmptyState
+          icon={<BarChart2 className="h-5 w-5" />}
+          title="No revenue data yet"
+          description="Connect Stripe and sync to see revenue over time."
+        />
+      </ChartCard>
+    )
+  }
 
   return (
     <ChartCard
