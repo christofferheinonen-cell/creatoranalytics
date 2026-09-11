@@ -1,41 +1,26 @@
 import Link from "next/link"
-import { CheckCircle2, XCircle, AlertCircle, RefreshCw } from "lucide-react"
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
+import { CheckCircle2, XCircle, AlertCircle } from "lucide-react"
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import type { ConnectedAccountSummary } from "@/types"
 import { formatDistanceToNow } from "date-fns"
 
 const PROVIDER_META: Record<
   string,
-  { label: string; logo: string; color: string }
+  { label: string; logo: string; bg: string; text: string }
 > = {
-  STRIPE: {
-    label: "Stripe",
-    logo: "S",
-    color: "bg-violet-100 text-violet-700",
-  },
-  KIT: {
-    label: "Kit",
-    logo: "K",
-    color: "bg-orange-100 text-orange-700",
-  },
-  MANYCHAT: {
-    label: "ManyChat",
-    logo: "M",
-    color: "bg-sky-100 text-sky-700",
-  },
-  CALENDLY: {
-    label: "Calendly",
-    logo: "C",
-    color: "bg-teal-100 text-teal-700",
-  },
+  STRIPE: { label: "Stripe", logo: "S", bg: "bg-violet-50", text: "text-violet-600" },
+  KIT: { label: "Kit", logo: "K", bg: "bg-orange-50", text: "text-orange-600" },
+  MANYCHAT: { label: "ManyChat", logo: "M", bg: "bg-sky-50", text: "text-sky-600" },
+  CALENDLY: { label: "Calendly", logo: "C", bg: "bg-teal-50", text: "text-teal-600" },
 }
 
 function StatusIcon({ status }: { status: string }) {
-  if (status === "ACTIVE") return <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-  if (status === "ERROR") return <AlertCircle className="h-3.5 w-3.5 text-amber-500" />
-  return <XCircle className="h-3.5 w-3.5 text-muted-foreground/40" />
+  if (status === "ACTIVE")
+    return <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+  if (status === "ERROR")
+    return <AlertCircle className="h-3.5 w-3.5 text-amber-400" />
+  return <XCircle className="h-3.5 w-3.5 text-[#CBD5E1]" />
 }
 
 interface ConnectedSourcesProps {
@@ -45,80 +30,62 @@ interface ConnectedSourcesProps {
 export function ConnectedSources({ accounts }: ConnectedSourcesProps) {
   return (
     <Card>
-      <CardHeader className="flex-row items-center justify-between pb-3">
-        <CardTitle>Connected Sources</CardTitle>
+      <div className="flex items-center justify-between px-5 pb-1 pt-5">
+        <div>
+          <h3 className="text-[13px] font-semibold text-brand-navy">Connected Sources</h3>
+          <p className="mt-0.5 text-[12px] text-muted-foreground">List of active integrations</p>
+        </div>
         <Button variant="ghost" size="sm" asChild>
-          <Link href="/integrations" className="text-xs text-muted-foreground">
+          <Link href="/integrations" className="text-[12px] text-muted-foreground">
             Manage
           </Link>
         </Button>
-      </CardHeader>
-      <CardContent className="pt-0">
-        <div className="flex flex-col gap-1">
+      </div>
+
+      <CardContent className="pt-3">
+        <div className="flex flex-col divide-y divide-[#F1F5F9]">
           {accounts.map((account) => {
             const meta = PROVIDER_META[account.provider] ?? {
               label: account.label,
               logo: account.label[0],
-              color: "bg-surface-subtle text-muted-foreground",
+              bg: "bg-[#F1F5F9]",
+              text: "text-muted-foreground",
             }
             const isConnected = account.status === "ACTIVE"
 
             return (
               <div
                 key={account.provider}
-                className="flex items-center gap-3 rounded-lg px-2 py-2.5 hover:bg-surface-subtle/60 transition-colors"
+                className="flex items-center gap-3 py-2.5"
               >
-                {/* Logo circle */}
                 <div
-                  className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-xs font-bold ${meta.color}`}
+                  className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[11px] font-bold ${meta.bg} ${meta.text}`}
                 >
                   {meta.logo}
                 </div>
 
-                {/* Name + status */}
                 <div className="flex min-w-0 flex-1 flex-col">
-                  <span className="text-xs font-medium text-brand-navy">
+                  <span className="text-[12px] font-medium text-brand-navy">
                     {meta.label}
                   </span>
-                  {isConnected && account.lastSyncedAt ? (
-                    <span className="text-[10px] text-muted-foreground">
-                      Synced{" "}
-                      {formatDistanceToNow(new Date(account.lastSyncedAt), {
-                        addSuffix: true,
-                      })}
-                    </span>
-                  ) : (
-                    <span className="text-[10px] text-muted-foreground">
-                      {isConnected ? "Connected" : "Not connected"}
-                    </span>
-                  )}
+                  <span className="text-[11px] text-muted-foreground">
+                    {isConnected && account.lastSyncedAt
+                      ? `Synced ${formatDistanceToNow(new Date(account.lastSyncedAt), { addSuffix: true })}`
+                      : isConnected
+                      ? "Connected"
+                      : "Not connected"}
+                  </span>
                 </div>
 
-                {/* Status badge + optional sync button */}
-                <div className="flex items-center gap-2">
-                  {isConnected ? (
-                    <Badge variant="success" className="text-[10px]">
-                      Active
-                    </Badge>
-                  ) : account.status === "ERROR" ? (
-                    <Badge variant="warning" className="text-[10px]">
-                      Error
-                    </Badge>
-                  ) : (
-                    <Badge variant="secondary" className="text-[10px]">
-                      —
-                    </Badge>
-                  )}
-                  <StatusIcon status={account.status} />
-                </div>
+                <StatusIcon status={account.status} />
               </div>
             )
           })}
         </div>
 
         {accounts.every((a) => a.status !== "ACTIVE") && (
-          <div className="mt-3 rounded-lg border border-dashed border-border p-3 text-center">
-            <p className="text-xs text-muted-foreground">
+          <div className="mt-3 rounded-lg border border-dashed border-[#E2E8F0] p-3 text-center">
+            <p className="text-[12px] text-muted-foreground">
               No integrations connected yet.{" "}
               <Link
                 href="/integrations"

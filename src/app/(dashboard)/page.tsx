@@ -142,8 +142,16 @@ export default async function DashboardPage() {
     }
   }
 
+  const firstName = session?.user?.name?.split(" ")[0] ?? "there"
+
   return (
-    <div className="flex flex-col gap-5 animate-fade-in">
+    <div className="flex flex-col gap-6 animate-fade-in">
+      {/* Greeting */}
+      <div>
+        <h1 className="text-2xl font-bold text-brand-navy">Hello {firstName},</h1>
+        <p className="mt-0.5 text-sm text-muted-foreground">Here's what's happening with your business.</p>
+      </div>
+
       <HeroCard totalRevenue={totalRevenue} previousRevenue={prevRevenue} transactionCount={transactionCount} />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -158,12 +166,13 @@ export default async function DashboardPage() {
           label="Active Subscribers"
           value={formatNumber(activeSubscribers)}
           icon={<TrendingUp className="h-4 w-4" />}
+          accent="teal"
         />
         <StatCard
           label="Calls Booked"
           value={formatNumber(callsBooked)}
           icon={<Phone className="h-4 w-4" />}
-          accent="teal"
+          accent="amber"
         />
         <StatCard
           label="Overall CVR"
@@ -171,6 +180,7 @@ export default async function DashboardPage() {
           trend={revenueTrend}
           trendLabel="revenue vs prev period"
           icon={<DollarSign className="h-4 w-4" />}
+          accent="emerald"
         />
       </div>
 

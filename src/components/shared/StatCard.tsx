@@ -1,15 +1,23 @@
-import { TrendingUp, TrendingDown, Minus } from "lucide-react"
+import { TrendingUp, TrendingDown } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Card, CardContent } from "@/components/ui/card"
 
 interface StatCardProps {
   label: string
   value: string
-  trend?: number     // percentage change vs previous period
+  trend?: number
   trendLabel?: string
   icon?: React.ReactNode
-  accent?: "indigo" | "teal" | "none"
+  accent?: "indigo" | "teal" | "amber" | "emerald" | "none"
   className?: string
+}
+
+const ACCENT_BG: Record<string, string> = {
+  indigo: "bg-indigo-50",
+  teal: "bg-teal-50",
+  amber: "bg-amber-50",
+  emerald: "bg-emerald-50",
+  none: "",
 }
 
 export function StatCard({
@@ -22,41 +30,39 @@ export function StatCard({
   className,
 }: StatCardProps) {
   const hasTrend = trend !== undefined
+  const cardBg = ACCENT_BG[accent] || ""
 
   return (
-    <Card
-      className={cn(
-        "relative overflow-hidden",
-        accent === "indigo" && "border-t-2 border-t-brand-indigo-500",
-        accent === "teal" && "border-t-2 border-t-brand-teal-500",
-        className
-      )}
-    >
+    <Card className={cn(cardBg && `border-0 ${cardBg}`, className)}>
       <CardContent className="p-5">
-        <div className="flex items-start justify-between">
-          <div className="flex flex-col gap-0.5">
-            <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-muted-foreground">
               {label}
             </span>
-            <span className="text-2xl font-bold tracking-tight text-brand-navy">
+            {icon && (
+              <span className="text-muted-foreground/50">{icon}</span>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <span className="text-2xl font-bold tracking-tight text-brand-navy tabular-nums">
               {value}
             </span>
             {hasTrend && (
-              <div className="mt-1 flex items-center gap-1">
+              <div className="flex items-center gap-1.5">
                 {trend > 0 ? (
                   <TrendingUp className="h-3 w-3 text-emerald-500" />
                 ) : trend < 0 ? (
                   <TrendingDown className="h-3 w-3 text-red-500" />
-                ) : (
-                  <Minus className="h-3 w-3 text-muted-foreground" />
-                )}
+                ) : null}
                 <span
                   className={cn(
-                    "text-[11px] font-medium",
+                    "text-xs font-medium",
                     trend > 0
                       ? "text-emerald-600"
                       : trend < 0
-                      ? "text-red-600"
+                      ? "text-red-500"
                       : "text-muted-foreground"
                   )}
                 >
@@ -69,11 +75,6 @@ export function StatCard({
               </div>
             )}
           </div>
-          {icon && (
-            <div className="rounded-lg bg-surface-subtle p-2 text-muted-foreground">
-              {icon}
-            </div>
-          )}
         </div>
       </CardContent>
     </Card>

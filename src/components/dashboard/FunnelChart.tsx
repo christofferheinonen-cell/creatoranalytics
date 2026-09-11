@@ -111,8 +111,8 @@ export function FunnelChart({
       title="Funnel Performance"
       description={`Overall conversion: ${overallConversion}% · top-of-funnel to revenue`}
       actions={
-        <span className="rounded-full bg-brand-indigo-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-brand-indigo-600">
-          Live data
+        <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold text-emerald-600">
+          Live
         </span>
       }
     >
