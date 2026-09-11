@@ -10,7 +10,6 @@ import {
   LogOut,
   TrendingUp,
 } from "lucide-react"
-// TrendingUp used for logo icon
 import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 
@@ -23,6 +22,7 @@ const NAV = [
     section: "Analytics",
     items: [
       { label: "Contacts", href: "/contacts", icon: Users },
+      { label: "Funnels", href: "/funnels", icon: TrendingUp },
     ],
   },
   {
