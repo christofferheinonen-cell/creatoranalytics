@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { Users, TrendingUp, Phone, DollarSign } from "lucide-react"
+import { Users, TrendingUp, Phone } from "lucide-react"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
 import { HeroCard } from "@/components/dashboard/HeroCard"
@@ -35,6 +35,7 @@ function groupByWeek(events: { value: { toNumber(): number } | null; timestamp: 
 export default async function DashboardPage() {
   const session = await auth()
   const userId = session!.user.id
+  const firstName = session?.user?.name?.split(" ")[0] ?? "there"
 
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
   const sixtyDaysAgo = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000)
@@ -88,11 +89,9 @@ export default async function DashboardPage() {
   const totalRevenue = currentRevenue._sum.value?.toNumber() ?? 0
   const prevRevenue = previousRevenue._sum.value?.toNumber() ?? 0
   const contactsTrend = pctChange(totalContacts, previousContacts)
-  const revenueTrend = pctChange(totalRevenue, prevRevenue)
 
   const revenueChartData = groupByWeek(revenueEvents)
 
-  // Build funnel stage arrays from real event counts
   const countByType = new Map<string, number>(funnelCounts.map((r) => [r.type as string, r._count.id]))
   const sourceByType = new Map<string, string>(funnelCounts.map((r) => [r.type as string, r.source.toLowerCase()]))
 
@@ -134,7 +133,6 @@ export default async function DashboardPage() {
     lastSyncedAt: a.lastSyncedAt?.toISOString() ?? null,
   }))
 
-  // Pad with disconnected entries for providers not yet connected
   const connectedProviders = new Set(integrations.map((i) => i.provider))
   for (const provider of Object.keys(PROVIDER_LABELS) as Provider[]) {
     if (!connectedProviders.has(provider)) {
@@ -142,60 +140,65 @@ export default async function DashboardPage() {
     }
   }
 
-  const firstName = session?.user?.name?.split(" ")[0] ?? "there"
-
   return (
-    <div className="flex flex-col gap-6 animate-fade-in">
-      {/* Greeting */}
-      <div>
-        <h1 className="text-2xl font-bold text-brand-navy">Hello {firstName},</h1>
-        <p className="mt-0.5 text-sm text-muted-foreground">Here's what's happening with your business.</p>
-      </div>
+    <div className="flex gap-6 animate-fade-in">
+      {/* ── Main content ── */}
+      <div className="flex min-w-0 flex-1 flex-col gap-6">
+        {/* Greeting */}
+        <div>
+          <h1 className="text-3xl font-bold text-brand-navy">
+            Hello {firstName},
+          </h1>
+          <p className="mt-1 text-base text-muted-foreground">
+            Here&apos;s what&apos;s happening with your creator business.
+          </p>
+        </div>
 
-      <HeroCard totalRevenue={totalRevenue} previousRevenue={prevRevenue} transactionCount={transactionCount} />
-
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard
-          label="Total Contacts"
-          value={formatNumber(totalContacts)}
-          trend={contactsTrend}
-          icon={<Users className="h-4 w-4" />}
-          accent="indigo"
-        />
-        <StatCard
-          label="Active Subscribers"
-          value={formatNumber(activeSubscribers)}
-          icon={<TrendingUp className="h-4 w-4" />}
-          accent="teal"
-        />
-        <StatCard
-          label="Calls Booked"
-          value={formatNumber(callsBooked)}
-          icon={<Phone className="h-4 w-4" />}
-          accent="amber"
-        />
-        <StatCard
-          label="Overall CVR"
-          value={totalContacts > 0 ? `${((callsBooked / totalContacts) * 100).toFixed(1)}%` : "—"}
-          trend={revenueTrend}
-          trendLabel="revenue vs prev period"
-          icon={<DollarSign className="h-4 w-4" />}
-          accent="emerald"
-        />
-      </div>
-
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <FunnelChart
-            freebbieFunnel={freebbieFunnel}
-            callFunnel={callFunnel}
-            combinedFunnel={combinedFunnel}
+        {/* Category stat cards */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <StatCard
+            label="Total Contacts"
+            description="Leads and subscribers."
+            value={formatNumber(totalContacts)}
+            trend={contactsTrend}
+            href="/contacts"
+            bg="bg-[#FFF7ED]"
+          />
+          <StatCard
+            label="Active Subscribers"
+            description="Current email list."
+            value={formatNumber(activeSubscribers)}
+            href="/contacts"
+            bg="bg-[#EEF2FF]"
+          />
+          <StatCard
+            label="Calls Booked"
+            description="Discovery calls this month."
+            value={formatNumber(callsBooked)}
+            bg="bg-[#F0FDF4]"
           />
         </div>
-        <ConnectedSources accounts={integrations} />
+
+        {/* Funnel chart */}
+        <FunnelChart
+          freebbieFunnel={freebbieFunnel}
+          callFunnel={callFunnel}
+          combinedFunnel={combinedFunnel}
+        />
+
+        {/* Revenue chart */}
+        <RevenueChart data={revenueChartData} />
       </div>
 
-      <RevenueChart data={revenueChartData} />
+      {/* ── Right panel ── */}
+      <div className="hidden w-[272px] shrink-0 flex-col gap-4 lg:flex">
+        <HeroCard
+          totalRevenue={totalRevenue}
+          previousRevenue={prevRevenue}
+          transactionCount={transactionCount}
+        />
+        <ConnectedSources accounts={integrations} />
+      </div>
     </div>
   )
 }

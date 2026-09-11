@@ -1,6 +1,5 @@
 import Link from "next/link"
 import { CheckCircle2, XCircle, AlertCircle } from "lucide-react"
-import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import type { ConnectedAccountSummary } from "@/types"
 import { formatDistanceToNow } from "date-fns"
@@ -29,20 +28,18 @@ interface ConnectedSourcesProps {
 
 export function ConnectedSources({ accounts }: ConnectedSourcesProps) {
   return (
-    <Card>
-      <div className="flex items-center justify-between px-5 pb-1 pt-5">
+    <div className="rounded-xl border border-[#E2E8F0] bg-white">
+      <div className="flex items-center justify-between px-5 pb-1 pt-4">
         <div>
-          <h3 className="text-[13px] font-semibold text-brand-navy">Connected Sources</h3>
-          <p className="mt-0.5 text-[12px] text-muted-foreground">List of active integrations</p>
+          <h3 className="text-[13px] font-semibold text-brand-navy">Top sources</h3>
+          <p className="text-[11px] text-muted-foreground">Connected integrations</p>
         </div>
-        <Button variant="ghost" size="sm" asChild>
-          <Link href="/integrations" className="text-[12px] text-muted-foreground">
-            Manage
-          </Link>
+        <Button variant="ghost" size="sm" asChild className="h-7 px-2 text-[11px] text-muted-foreground">
+          <Link href="/integrations">Manage</Link>
         </Button>
       </div>
 
-      <CardContent className="pt-3">
+      <div className="px-5 pb-4 pt-2">
         <div className="flex flex-col divide-y divide-[#F1F5F9]">
           {accounts.map((account) => {
             const meta = PROVIDER_META[account.provider] ?? {
@@ -54,16 +51,12 @@ export function ConnectedSources({ accounts }: ConnectedSourcesProps) {
             const isConnected = account.status === "ACTIVE"
 
             return (
-              <div
-                key={account.provider}
-                className="flex items-center gap-3 py-2.5"
-              >
+              <div key={account.provider} className="flex items-center gap-3 py-2.5">
                 <div
                   className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[11px] font-bold ${meta.bg} ${meta.text}`}
                 >
                   {meta.logo}
                 </div>
-
                 <div className="flex min-w-0 flex-1 flex-col">
                   <span className="text-[12px] font-medium text-brand-navy">
                     {meta.label}
@@ -76,7 +69,6 @@ export function ConnectedSources({ accounts }: ConnectedSourcesProps) {
                       : "Not connected"}
                   </span>
                 </div>
-
                 <StatusIcon status={account.status} />
               </div>
             )
@@ -84,19 +76,13 @@ export function ConnectedSources({ accounts }: ConnectedSourcesProps) {
         </div>
 
         {accounts.every((a) => a.status !== "ACTIVE") && (
-          <div className="mt-3 rounded-lg border border-dashed border-[#E2E8F0] p-3 text-center">
-            <p className="text-[12px] text-muted-foreground">
-              No integrations connected yet.{" "}
-              <Link
-                href="/integrations"
-                className="font-medium text-brand-indigo-500 hover:underline"
-              >
-                Connect your first →
-              </Link>
-            </p>
-          </div>
+          <p className="mt-3 text-center text-[12px] text-muted-foreground">
+            <Link href="/integrations" className="font-medium text-brand-indigo-500 hover:underline">
+              Connect your first integration →
+            </Link>
+          </p>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }
