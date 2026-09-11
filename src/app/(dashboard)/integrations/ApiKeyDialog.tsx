@@ -37,14 +37,23 @@ export function ApiKeyDialog({ provider, label, docsUrl, open, onOpenChange, onS
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ provider, apiKey: apiKey.trim() }),
       })
+      const data = (await res.json()) as { success?: boolean; connectedAccountId?: string; error?: string }
       if (!res.ok) {
-        const data = (await res.json()) as { error?: string }
         setError(data.error ?? "Failed to save key.")
         return
       }
       setApiKey("")
-      onSuccess()
       onOpenChange(false)
+      // Kick off initial sync in the background — don't block the dialog close
+      if (data.connectedAccountId) {
+        void fetch("/api/sync", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ connectedAccountId: data.connectedAccountId }),
+        }).then(() => onSuccess())
+      } else {
+        onSuccess()
+      }
     } catch {
       setError("Network error. Please try again.")
     } finally {

@@ -20,11 +20,12 @@ export async function POST(req: NextRequest) {
   const { provider, apiKey } = parsed.data
   const encryptedKey = await encrypt(apiKey)
 
-  await prisma.connectedAccount.upsert({
+  const account = await prisma.connectedAccount.upsert({
     where: { userId_provider: { userId: session.user.id, provider } },
     create: { userId: session.user.id, provider, apiKey: encryptedKey, status: "ACTIVE" },
-    update: { apiKey: encryptedKey, status: "ACTIVE" },
+    // Reset lastSyncedAt on reconnect so the next sync fetches full history
+    update: { apiKey: encryptedKey, status: "ACTIVE", lastSyncedAt: null },
   })
 
-  return NextResponse.json({ success: true })
+  return NextResponse.json({ success: true, connectedAccountId: account.id })
 }
