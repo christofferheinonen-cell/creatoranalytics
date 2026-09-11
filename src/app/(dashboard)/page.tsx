@@ -162,20 +162,20 @@ export default async function DashboardPage() {
             value={formatNumber(totalContacts)}
             trend={contactsTrend}
             href="/contacts"
-            bg="bg-[#FFF7ED]"
+            bg="bg-[#E0E7FF]"
           />
           <StatCard
             label="Active Subscribers"
             description="Current email list."
             value={formatNumber(activeSubscribers)}
             href="/contacts"
-            bg="bg-[#EEF2FF]"
+            bg="bg-[#D1FAE5]"
           />
           <StatCard
             label="Calls Booked"
             description="Discovery calls this month."
             value={formatNumber(callsBooked)}
-            bg="bg-[#F0FDF4]"
+            bg="bg-[#EDE9FE]"
           />
         </div>
 
