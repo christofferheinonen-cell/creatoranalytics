@@ -1,5 +1,7 @@
 import type { Metadata } from "next"
 import { Users } from "lucide-react"
+import { auth } from "@/auth"
+import { prisma } from "@/lib/prisma"
 import {
   Table,
   TableBody,
@@ -12,7 +14,6 @@ import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { EmptyState } from "@/components/shared/EmptyState"
-import { MOCK_CONTACTS } from "@/lib/mock-data"
 import { formatCurrency } from "@/lib/utils"
 
 export const metadata: Metadata = { title: "Contacts" }
@@ -36,8 +37,43 @@ const SOURCE_COLORS: Record<string, string> = {
   calendly: "bg-teal-100 text-teal-700",
 }
 
-export default function ContactsPage() {
-  const contacts = MOCK_CONTACTS // TODO: replace with DB query filtered by userId
+export default async function ContactsPage() {
+  const session = await auth()
+  const userId = session!.user.id
+
+  const rows = await prisma.contact.findMany({
+    where: { userId },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      currentStage: true,
+      lifetimeValue: true,
+      createdAt: true,
+      stripeCustomerId: true,
+      kitSubscriberId: true,
+      manychatUserId: true,
+      calendlyInviteeId: true,
+    },
+    orderBy: { createdAt: "desc" },
+  })
+
+  const contacts = rows.map((c) => {
+    const sources: string[] = []
+    if (c.manychatUserId) sources.push("manychat")
+    if (c.kitSubscriberId) sources.push("kit")
+    if (c.calendlyInviteeId) sources.push("calendly")
+    if (c.stripeCustomerId) sources.push("stripe")
+    return {
+      id: c.id,
+      name: c.name,
+      email: c.email,
+      currentStage: c.currentStage,
+      lifetimeValue: c.lifetimeValue.toNumber(),
+      joinedAt: c.createdAt.toISOString(),
+      sources,
+    }
+  })
 
   if (contacts.length === 0) {
     return (
@@ -99,7 +135,7 @@ export default function ContactsPage() {
                             {contact.name ?? "—"}
                           </span>
                           <span className="text-xs text-muted-foreground">
-                            {contact.email}
+                            {contact.email ?? "—"}
                           </span>
                         </div>
                       </div>
@@ -115,14 +151,16 @@ export default function ContactsPage() {
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
-                        {contact.sources.map((src) => (
+                        {contact.sources.length > 0 ? contact.sources.map((src) => (
                           <span
                             key={src}
                             className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${SOURCE_COLORS[src] ?? "bg-surface-subtle text-muted-foreground"}`}
                           >
                             {src}
                           </span>
-                        ))}
+                        )) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell className="text-right pr-5">

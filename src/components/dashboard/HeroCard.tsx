@@ -4,13 +4,15 @@ import { formatCurrency } from "@/lib/utils"
 interface HeroCardProps {
   totalRevenue: number
   previousRevenue: number
+  transactionCount: number
   period?: string
 }
 
 export function HeroCard({
   totalRevenue,
   previousRevenue,
-  period = "last 90 days",
+  transactionCount,
+  period = "last 30 days",
 }: HeroCardProps) {
   const pctChange =
     previousRevenue > 0
@@ -66,14 +68,18 @@ export function HeroCard({
               Avg. order
             </span>
             <span className="text-xl font-bold">
-              {formatCurrency(totalRevenue / 119)}
+              {transactionCount > 0
+                ? formatCurrency(totalRevenue / transactionCount)
+                : "—"}
             </span>
           </div>
           <div className="flex flex-col">
             <span className="text-[10px] font-medium uppercase tracking-wider opacity-70">
               Transactions
             </span>
-            <span className="text-xl font-bold">119</span>
+            <span className="text-xl font-bold">
+              {transactionCount > 0 ? transactionCount : "—"}
+            </span>
           </div>
         </div>
       </div>
