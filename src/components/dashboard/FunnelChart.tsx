@@ -16,8 +16,18 @@ const SOURCE_COLORS: Record<string, string> = {
   mixed: "bg-slate-400",
 }
 
+function NoData() {
+  return (
+    <div className="flex h-40 items-center justify-center">
+      <span className="text-sm font-semibold uppercase tracking-widest text-muted-foreground/40">
+        No Data
+      </span>
+    </div>
+  )
+}
+
 function FunnelBar({ stages }: { stages: FunnelStage[] }) {
-  if (stages.length === 0) return null
+  if (stages.length === 0) return <NoData />
 
   const topCount = stages[0].count
 
