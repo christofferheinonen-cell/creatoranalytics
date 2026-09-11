@@ -18,6 +18,13 @@ export async function POST() {
     prisma.contact.deleteMany({ where: { userId } }),
   ])
 
+  // Reset lastSyncedAt so the next sync does a full historical re-fetch,
+  // not an incremental one anchored to the now-stale timestamp.
+  await prisma.connectedAccount.updateMany({
+    where: { userId },
+    data: { lastSyncedAt: null },
+  })
+
   return NextResponse.json({
     ok: true,
     deletedEvents: deletedEvents.count,
