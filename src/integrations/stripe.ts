@@ -75,10 +75,13 @@ export async function syncStripe(
               currentStage: "PURCHASED",
             },
           })
-        } else if (charge.customer && !contact.stripeCustomerId) {
+        } else {
           await prisma.contact.update({
             where: { id: contact.id },
-            data: { stripeCustomerId: charge.customer, currentStage: "PURCHASED" },
+            data: {
+              ...(charge.customer && !contact.stripeCustomerId ? { stripeCustomerId: charge.customer } : {}),
+              currentStage: "PURCHASED",
+            },
           })
         }
 

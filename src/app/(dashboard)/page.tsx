@@ -65,7 +65,7 @@ export default async function DashboardPage() {
     }),
     prisma.contact.count({ where: { userId } }),
     prisma.contact.count({ where: { userId, createdAt: { lt: thirtyDaysAgo } } }),
-    prisma.contact.count({ where: { userId, currentStage: "SUBSCRIBED" } }),
+    prisma.contact.count({ where: { userId, kitSubscriberId: { not: null } } }),
     prisma.funnelEvent.count({
       where: { userId, type: "CALL_SCHEDULED", timestamp: { gte: thirtyDaysAgo } },
     }),

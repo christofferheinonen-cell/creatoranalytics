@@ -87,11 +87,11 @@ export async function syncKit(
                 eventType === "SUBSCRIBED" ? "SUBSCRIBED" : undefined,
             },
           })
-        } else if (!contact.kitSubscriberId) {
+        } else {
           await prisma.contact.update({
             where: { id: contact.id },
             data: {
-              kitSubscriberId: String(subscriber.id),
+              ...(contact.kitSubscriberId ? {} : { kitSubscriberId: String(subscriber.id) }),
               currentStage:
                 eventType === "SUBSCRIBED" ? "SUBSCRIBED" : contact.currentStage,
             },
