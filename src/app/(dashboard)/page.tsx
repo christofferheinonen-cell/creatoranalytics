@@ -3,8 +3,8 @@ import Link from "next/link"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
 import { HeroCard } from "@/components/dashboard/HeroCard"
-import { FunnelChart } from "@/components/dashboard/FunnelChart"
 import type { FunnelDef } from "@/components/dashboard/FunnelChart"
+import { DashboardFunnelView } from "@/components/dashboard/DashboardFunnelView"
 import { extractFunnelStages, getFunnelStageCounts } from "@/lib/funnel-analytics"
 import { RevenueChart } from "@/components/dashboard/RevenueChart"
 import { ConnectedSources } from "@/components/dashboard/ConnectedSources"
@@ -232,8 +232,8 @@ export default async function DashboardPage() {
           </Link>
         </div>
 
-        {/* Funnel performance */}
-        <FunnelChart funnels={funnelDefs} />
+        {/* Funnel performance quick view */}
+        <DashboardFunnelView funnels={funnelDefs} />
 
         {/* Revenue chart */}
         <RevenueChart data={revenueChartData} stripeConnected={stripeConnected} />
@@ -242,8 +242,8 @@ export default async function DashboardPage() {
       {/* Right column */}
       <div className="flex flex-col gap-[18px] min-w-0" style={{ flex: "1 1 300px" }}>
         <RevenuePill totalRevenue={totalRevenue} transactionCount={transactionCount} />
-        <SetupProgress steps={setupSteps} />
         <ConnectedSources accounts={integrations} sourceShares={sourceShares} />
+        <SetupProgress steps={setupSteps} />
       </div>
     </div>
   )

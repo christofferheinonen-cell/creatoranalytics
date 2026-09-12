@@ -57,6 +57,7 @@ export default async function FunnelBuilderPage({
       initialNodes={nodes}
       funnelName={funnel.name}
       funnelId={funnel.id}
+      funnelStatus={funnel.status}
     />
   )
 }

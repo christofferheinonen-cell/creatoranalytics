@@ -347,10 +347,12 @@ export function FunnelBuilder({
   initialNodes,
   funnelName: initialName,
   funnelId: initialFunnelId = null,
+  funnelStatus: initialStatus = "DRAFT",
 }: {
   initialNodes: MockBuilderNode[]
   funnelName: string
   funnelId?: string | null
+  funnelStatus?: "DRAFT" | "ACTIVE" | "ARCHIVED"
 }) {
   const router = useRouter()
   const canvasRef = useRef<HTMLDivElement>(null)
@@ -366,6 +368,7 @@ export function FunnelBuilder({
   const [funnelName, setFunnelName] = useState(initialName)
   const [funnelId, setFunnelId] = useState<string | null>(initialFunnelId)
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle")
+  const [status, setStatus] = useState<"DRAFT" | "ACTIVE" | "ARCHIVED">(initialStatus)
   const [view, setView] = useState<"build" | "analytics">("build")
   const [analyticsData, setAnalyticsData] = useState<{ eventType: string; label: string; source: string; count: number }[] | null>(null)
   const [analyticsLoading, setAnalyticsLoading] = useState(false)
@@ -534,6 +537,17 @@ export function FunnelBuilder({
     }
   }, [funnelId, funnelName, nodes, saveState, router])
 
+  const handleToggleStatus = useCallback(async () => {
+    if (!funnelId) return
+    const next = status === "ACTIVE" ? "DRAFT" : "ACTIVE"
+    setStatus(next)
+    await fetch(`/api/funnels/${funnelId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: next }),
+    })
+  }, [funnelId, status])
+
   const fetchAnalytics = useCallback(async (currentNodes: MockBuilderNode[]) => {
     // Extract stages from node graph — same logic as server-side extractFunnelStages
     const hasIncoming = new Set(currentNodes.flatMap((n) => n.outputs))
@@ -687,6 +701,20 @@ export function FunnelBuilder({
             <span className="rounded-full bg-brand-indigo-50 px-2.5 py-1 text-[10px] font-semibold text-brand-indigo-600">
               Click a node to connect · Esc to cancel
             </span>
+          )}
+
+          {funnelId && (
+            <button
+              onClick={handleToggleStatus}
+              className={cn(
+                "rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors border-none cursor-pointer shrink-0",
+                status === "ACTIVE"
+                  ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+                  : "bg-amber-100 text-amber-700 hover:bg-amber-200"
+              )}
+            >
+              {status === "ACTIVE" ? "● Active" : "○ Draft"}
+            </button>
           )}
 
           {view === "build" && (
