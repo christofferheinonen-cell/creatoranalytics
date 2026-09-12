@@ -502,11 +502,7 @@ export function FunnelBuilder({
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    // Break out of dashboard's px-6 py-6 container, fill remaining viewport
-    <div
-      className="-mx-6 -my-6 flex overflow-hidden"
-      style={{ height: "calc(100vh - 57px)" }}
-    >
+    <div className="flex h-full w-full overflow-hidden">
       {/* ── Left palette ──────────────────────────────────────────────── */}
       <aside className="flex w-[268px] shrink-0 flex-col border-r border-border bg-surface-card overflow-hidden">
         <div className="border-b border-border px-4 py-3">
