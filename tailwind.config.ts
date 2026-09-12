@@ -16,7 +16,27 @@ const config: Config = {
     },
     extend: {
       colors: {
-        // Design token palette
+        // New Creatorly design palette
+        cr: {
+          black: "#0b0b0f",
+          dark: "#232634",
+          "text-2": "#4a5164",
+          "text-3": "#7b8497",
+          "text-4": "#9aa2b1",
+          "text-5": "#b6bdca",
+          "blue-50": "#f7f9fe",
+          "blue-100": "#edf2fb",
+          "blue-150": "#f2f5fb",
+          "blue-200": "#e2eafc",
+          "blue-300": "#dde4f2",
+          "blue-400": "#ccdbfd",
+          "blue-500": "#c1d3fe",
+          "blue-600": "#abc4ff",
+          "gray-100": "#f5f6f8",
+          "gray-200": "#dfe6f4",
+          "sidebar": "#fbfcff",
+        },
+        // Legacy brand tokens (kept for auth pages + shadcn primitives)
         brand: {
           indigo: {
             50: "#EEF2FF",
@@ -36,13 +56,12 @@ const config: Config = {
             500: "#14B8A6",
             600: "#0D9488",
           },
-          navy: "#0F172A",
+          navy: "#0b0b0f",
         },
-        // Surface tokens
-        "surface-page": "#F8FAFC",
+        "surface-page": "#f7f9fe",
         "surface-card": "#FFFFFF",
-        "surface-subtle": "#F1F5F9",
-        // shadcn CSS-variable based (required by primitives)
+        "surface-subtle": "#f7f9fe",
+        // shadcn CSS-variable based
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         primary: {
@@ -83,14 +102,13 @@ const config: Config = {
         sm: "calc(var(--radius) - 4px)",
       },
       fontFamily: {
-        sans: ["Inter", "system-ui", "sans-serif"],
+        sans: ['"Plus Jakarta Sans"', "system-ui", "sans-serif"],
       },
       boxShadow: {
         card: "0 1px 3px 0 rgb(0 0 0 / 0.04), 0 1px 2px -1px rgb(0 0 0 / 0.04)",
-        "card-hover":
-          "0 4px 12px 0 rgb(0 0 0 / 0.08), 0 2px 4px -1px rgb(0 0 0 / 0.04)",
-        panel:
-          "0 0 0 1px rgb(0 0 0 / 0.04), 0 2px 8px 0 rgb(0 0 0 / 0.06)",
+        "card-hover": "0 4px 12px 0 rgb(0 0 0 / 0.08), 0 2px 4px -1px rgb(0 0 0 / 0.04)",
+        panel: "0 0 0 1px rgb(0 0 0 / 0.04), 0 2px 8px 0 rgb(0 0 0 / 0.06)",
+        "main-card": "0 2px 4px rgba(11,11,15,.04), 0 30px 70px -30px rgba(11,11,15,.28)",
       },
       keyframes: {
         "accordion-down": {

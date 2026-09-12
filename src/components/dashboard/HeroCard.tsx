@@ -1,88 +1,95 @@
-import { TrendingUp, ArrowUpRight } from "lucide-react"
-import { formatCurrency } from "@/lib/utils"
+import Link from "next/link"
 
-interface HeroCardProps {
-  totalRevenue: number
-  previousRevenue: number
-  transactionCount: number
-  period?: string
+interface StatTileProps {
+  title: string
+  subtitle: string
+  value: number | string
+  badge: string
+  bg: string
+  badgeBg?: string
 }
 
-export function HeroCard({
-  totalRevenue,
-  previousRevenue,
-  transactionCount,
-  period = "last 30 days",
-}: HeroCardProps) {
-  const pctChange =
-    previousRevenue > 0
-      ? ((totalRevenue - previousRevenue) / previousRevenue) * 100
-      : 0
+function StatTile({ title, subtitle, value, badge, bg, badgeBg }: StatTileProps) {
+  return (
+    <div
+      className="relative flex flex-col"
+      style={{ background: bg, borderRadius: "26px", padding: "20px 20px 26px", minHeight: "186px" }}
+    >
+      <div className="text-[17px] font-bold tracking-[-0.02em] text-cr-black">{title}</div>
+      <div className="text-[13.5px] mt-[5px] leading-[1.45]" style={{ color: "#6d7688" }}>
+        {subtitle}
+      </div>
+      <div className="mt-auto flex items-end gap-2">
+        <span className="text-[40px] font-bold tracking-[-0.04em] leading-none text-cr-black">
+          {value}
+        </span>
+        <span
+          className="text-[12.5px] font-semibold text-cr-black mb-1"
+          style={{
+            background: badgeBg ?? "rgba(255,255,255,.7)",
+            borderRadius: "99px",
+            padding: "3px 9px",
+          }}
+        >
+          {badge}
+        </span>
+      </div>
+      <Link
+        href="/contacts"
+        className="absolute flex items-center justify-center text-white hover:bg-cr-blue-600 hover:text-cr-black transition-colors"
+        style={{
+          right: "-4px",
+          bottom: "-4px",
+          width: "46px",
+          height: "46px",
+          borderRadius: "99px",
+          background: "#0b0b0f",
+          boxShadow: "0 0 0 8px #fff",
+        }}
+      >
+        <svg width="17" height="17" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M6 14 14 6M7 6h7v7" />
+        </svg>
+      </Link>
+    </div>
+  )
+}
+
+interface HeroCardProps {
+  totalContacts: number
+  activeSubscribers: number
+  callsBooked: number
+  contactsTrend: number
+}
+
+export function HeroCard({ totalContacts, activeSubscribers, callsBooked, contactsTrend }: HeroCardProps) {
+  const activePct = totalContacts > 0 ? Math.round((activeSubscribers / totalContacts) * 100) : 0
 
   return (
-    <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-brand-indigo-600 via-brand-indigo-500 to-brand-teal-500 p-6 text-white shadow-card">
-      {/* Abstract geometric decoration */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -right-8 -top-8 h-48 w-48 rounded-full bg-white/5"
+    <div className="grid gap-[14px]" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))" }}>
+      <StatTile
+        title="Contacts"
+        subtitle="Leads and subscribers."
+        value={totalContacts}
+        badge={contactsTrend > 0 ? `+${contactsTrend}` : String(totalContacts)}
+        bg="#edf2fb"
       />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -bottom-12 -right-4 h-56 w-56 rounded-full bg-white/5"
+      <StatTile
+        title="Subscribers"
+        subtitle="Current email list."
+        value={activeSubscribers}
+        badge={`${activePct}% active`}
+        bg="#ccdbfd"
+        badgeBg="rgba(255,255,255,.72)"
       />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute bottom-4 right-32 h-20 w-20 rounded-full bg-white/10"
+      <StatTile
+        title="Calls booked"
+        subtitle="Discovery calls this month."
+        value={callsBooked === 0 ? "0" : callsBooked}
+        badge={callsBooked === 0 ? "Needs setup" : `+${callsBooked}`}
+        bg="#f5f6f8"
+        badgeBg="#fff"
       />
-
-      <div className="relative flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-2 opacity-80">
-            <TrendingUp className="h-3.5 w-3.5" />
-            <span className="text-xs font-medium uppercase tracking-wider">
-              Total Revenue · {period}
-            </span>
-          </div>
-          <div className="flex items-baseline gap-3">
-            <span className="text-4xl font-bold tracking-tight">
-              {formatCurrency(totalRevenue, "USD", true)}
-            </span>
-            {pctChange !== 0 && (
-              <div className="flex items-center gap-1 rounded-full bg-white/15 px-2 py-0.5">
-                <ArrowUpRight className="h-3 w-3" />
-                <span className="text-xs font-semibold">
-                  +{pctChange.toFixed(1)}%
-                </span>
-              </div>
-            )}
-          </div>
-          <p className="text-xs opacity-70">
-            vs {formatCurrency(previousRevenue, "USD", true)} previous period
-          </p>
-        </div>
-
-        {/* Secondary stats */}
-        <div className="flex gap-6">
-          <div className="flex flex-col">
-            <span className="text-[10px] font-medium uppercase tracking-wider opacity-70">
-              Avg. order
-            </span>
-            <span className="text-xl font-bold">
-              {transactionCount > 0
-                ? formatCurrency(totalRevenue / transactionCount)
-                : "—"}
-            </span>
-          </div>
-          <div className="flex flex-col">
-            <span className="text-[10px] font-medium uppercase tracking-wider opacity-70">
-              Transactions
-            </span>
-            <span className="text-xl font-bold">
-              {transactionCount > 0 ? transactionCount : "—"}
-            </span>
-          </div>
-        </div>
-      </div>
     </div>
   )
 }

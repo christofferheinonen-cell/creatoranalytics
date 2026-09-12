@@ -1,12 +1,13 @@
 import type { Metadata } from "next"
-import { Users, TrendingUp, Phone, DollarSign } from "lucide-react"
+import Link from "next/link"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
 import { HeroCard } from "@/components/dashboard/HeroCard"
 import { FunnelChart } from "@/components/dashboard/FunnelChart"
 import { RevenueChart } from "@/components/dashboard/RevenueChart"
 import { ConnectedSources } from "@/components/dashboard/ConnectedSources"
-import { StatCard } from "@/components/shared/StatCard"
+import { RevenuePill } from "@/components/dashboard/RevenuePill"
+import { SetupProgress } from "@/components/dashboard/SetupProgress"
 import { pctChange, formatNumber } from "@/lib/utils"
 import type { ConnectedAccountSummary, FunnelStage, Provider } from "@/types"
 
@@ -35,6 +36,7 @@ function groupByWeek(events: { value: { toNumber(): number } | null; timestamp: 
 export default async function DashboardPage() {
   const session = await auth()
   const userId = session!.user.id
+  const firstName = session!.user?.name?.split(" ")[0] ?? "there"
 
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
   const sixtyDaysAgo = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000)
@@ -51,6 +53,7 @@ export default async function DashboardPage() {
     revenueEvents,
     connectedAccounts,
     funnelCounts,
+    contactSources,
   ] = await Promise.all([
     prisma.funnelEvent.aggregate({
       where: { userId, type: "PURCHASED", timestamp: { gte: thirtyDaysAgo } },
@@ -83,16 +86,20 @@ export default async function DashboardPage() {
       where: { userId },
       _count: { id: true },
     }),
+    // Count contacts by source field
+    prisma.contact.groupBy({
+      by: ["source"],
+      where: { userId },
+      _count: { id: true },
+    }),
   ])
 
   const totalRevenue = currentRevenue._sum.value?.toNumber() ?? 0
   const prevRevenue = previousRevenue._sum.value?.toNumber() ?? 0
-  const contactsTrend = pctChange(totalContacts, previousContacts)
-  const revenueTrend = pctChange(totalRevenue, prevRevenue)
+  const contactsTrend = totalContacts - previousContacts
 
   const revenueChartData = groupByWeek(revenueEvents)
 
-  // Build funnel stage arrays from real event counts
   const countByType = new Map<string, number>(funnelCounts.map((r) => [r.type as string, r._count.id]))
   const sourceByType = new Map<string, string>(funnelCounts.map((r) => [r.type as string, r.source.toLowerCase()]))
 
@@ -127,14 +134,13 @@ export default async function DashboardPage() {
     makeStage("PURCHASED", "Purchased"),
   ].filter(Boolean) as FunnelStage[]
 
+  // Build integration list
   const integrations: ConnectedAccountSummary[] = connectedAccounts.map((a) => ({
     provider: a.provider,
     label: PROVIDER_LABELS[a.provider],
     status: a.status,
     lastSyncedAt: a.lastSyncedAt?.toISOString() ?? null,
   }))
-
-  // Pad with disconnected entries for providers not yet connected
   const connectedProviders = new Set(integrations.map((i) => i.provider))
   for (const provider of Object.keys(PROVIDER_LABELS) as Provider[]) {
     if (!connectedProviders.has(provider)) {
@@ -142,50 +148,118 @@ export default async function DashboardPage() {
     }
   }
 
+  // Source shares for top sources bar
+  const sourceShareMap = new Map(contactSources.map((r) => [r.source ?? "unknown", r._count.id]))
+  const totalFromSources = [...sourceShareMap.values()].reduce((a, b) => a + b, 0)
+  const sourceShares = (["STRIPE", "KIT", "MANYCHAT", "CALENDLY"] as Provider[])
+    .map((p) => {
+      const slug = p.toLowerCase()
+      const count = sourceShareMap.get(slug) ?? 0
+      return { provider: p, pct: totalFromSources > 0 ? Math.round((count / totalFromSources) * 100) : 0 }
+    })
+    .filter((s) => s.pct > 0)
+
+  // Setup steps
+  const connectedSet = new Set(connectedAccounts.filter((a) => a.status === "ACTIVE").map((a) => a.provider))
+  const hasAnyFunnelEvents = funnelCounts.length > 0
+  const setupSteps = [
+    { label: "Connect Stripe", done: connectedSet.has("STRIPE"), href: "/integrations" },
+    { label: "Import email list", done: connectedSet.has("KIT"), href: "/integrations" },
+    { label: "Connect Calendly", done: connectedSet.has("CALENDLY"), href: "/integrations" },
+    { label: "Publish first funnel", done: hasAnyFunnelEvents, href: "/funnels" },
+  ]
+
+  const stripeConnected = connectedSet.has("STRIPE")
+
   return (
-    <div className="flex flex-col gap-5 animate-fade-in">
-      <HeroCard totalRevenue={totalRevenue} previousRevenue={prevRevenue} transactionCount={transactionCount} />
-
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard
-          label="Total Contacts"
-          value={formatNumber(totalContacts)}
-          trend={contactsTrend}
-          icon={<Users className="h-4 w-4" />}
-          accent="indigo"
-        />
-        <StatCard
-          label="Active Subscribers"
-          value={formatNumber(activeSubscribers)}
-          icon={<TrendingUp className="h-4 w-4" />}
-        />
-        <StatCard
-          label="Calls Booked"
-          value={formatNumber(callsBooked)}
-          icon={<Phone className="h-4 w-4" />}
-          accent="teal"
-        />
-        <StatCard
-          label="Overall CVR"
-          value={totalContacts > 0 ? `${((callsBooked / totalContacts) * 100).toFixed(1)}%` : "—"}
-          trend={revenueTrend}
-          trendLabel="revenue vs prev period"
-          icon={<DollarSign className="h-4 w-4" />}
-        />
-      </div>
-
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <FunnelChart
-            freebbieFunnel={freebbieFunnel}
-            callFunnel={callFunnel}
-            combinedFunnel={combinedFunnel}
-          />
+    <div
+      className="flex flex-wrap gap-[22px] items-start"
+      style={{ flex: 1, overflowY: "auto", padding: "6px 22px 26px" }}
+    >
+      {/* Left column */}
+      <div className="flex flex-col gap-[18px] min-w-0" style={{ flex: "4 1 460px" }}>
+        {/* Greeting + date range */}
+        <div className="flex items-end justify-between gap-4 flex-wrap">
+          <div>
+            <h1 className="text-[30px] font-bold tracking-[-0.04em] text-cr-black m-0">
+              Hello {firstName},
+            </h1>
+            <p className="text-[15px] text-cr-text-3 mt-[7px] mb-0">
+              Here&apos;s what&apos;s happening with your creator business.
+            </p>
+          </div>
+          {/* Date range picker */}
+          <div
+            className="flex gap-[2px] p-1"
+            style={{ background: "#f7f9fe", border: "1px solid #edf2fb", borderRadius: "99px" }}
+          >
+            {["30 days", "90 days", "Year"].map((label, i) => (
+              <button
+                key={label}
+                className="border-none font-[inherit] text-[13px] font-semibold px-[15px] py-[7px] rounded-full cursor-pointer transition-colors whitespace-nowrap"
+                style={
+                  i === 0
+                    ? { background: "#fff", color: "#0b0b0f", boxShadow: "0 1px 3px rgba(11,11,15,.1)" }
+                    : { background: "transparent", color: "#7b8497" }
+                }
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
-        <ConnectedSources accounts={integrations} />
+
+        {/* Stat tiles */}
+        <HeroCard
+          totalContacts={totalContacts}
+          activeSubscribers={activeSubscribers}
+          callsBooked={callsBooked}
+          contactsTrend={contactsTrend}
+        />
+
+        {/* Pro upgrade banner */}
+        <div
+          className="flex items-center gap-[14px] flex-wrap"
+          style={{ background: "#0b0b0f", borderRadius: "24px", padding: "16px 20px", color: "#fff" }}
+        >
+          <span
+            className="text-[11px] font-bold tracking-[0.12em] text-cr-blue-600 rounded-full px-[11px] py-1"
+            style={{ border: "1px solid rgba(171,196,255,.35)" }}
+          >
+            PRO
+          </span>
+          <span className="text-[16px] font-semibold tracking-[-0.02em]">
+            Unlock automated revenue attribution
+          </span>
+          <Link
+            href="/settings"
+            className="ml-auto flex items-center gap-[9px] text-[13.5px] font-semibold text-cr-black rounded-full px-4 py-[9px] whitespace-nowrap hover:bg-white transition-colors"
+            style={{ background: "#abc4ff" }}
+          >
+            Switch to Pro
+            <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M6 14 14 6M7 6h7v7" />
+            </svg>
+          </Link>
+        </div>
+
+        {/* Funnel performance */}
+        <FunnelChart
+          freebbieFunnel={freebbieFunnel}
+          callFunnel={callFunnel}
+          combinedFunnel={combinedFunnel}
+        />
+
+        {/* Revenue chart */}
+        <RevenueChart data={revenueChartData} stripeConnected={stripeConnected} />
       </div>
 
-      <RevenueChart data={revenueChartData} />
+      {/* Right column */}
+      <div className="flex flex-col gap-[18px] min-w-0" style={{ flex: "1 1 300px" }}>
+        <RevenuePill totalRevenue={totalRevenue} transactionCount={transactionCount} />
+        <SetupProgress steps={setupSteps} />
+        <ConnectedSources accounts={integrations} sourceShares={sourceShares} />
+      </div>
     </div>
   )
 }

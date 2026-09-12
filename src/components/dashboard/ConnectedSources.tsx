@@ -1,135 +1,136 @@
 import Link from "next/link"
-import { CheckCircle2, XCircle, AlertCircle, RefreshCw } from "lucide-react"
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import type { ConnectedAccountSummary } from "@/types"
 import { formatDistanceToNow } from "date-fns"
+import type { ConnectedAccountSummary } from "@/types"
 
-const PROVIDER_META: Record<
-  string,
-  { label: string; logo: string; color: string }
-> = {
-  STRIPE: {
-    label: "Stripe",
-    logo: "S",
-    color: "bg-violet-100 text-violet-700",
-  },
-  KIT: {
-    label: "Kit",
-    logo: "K",
-    color: "bg-orange-100 text-orange-700",
-  },
-  MANYCHAT: {
-    label: "ManyChat",
-    logo: "M",
-    color: "bg-sky-100 text-sky-700",
-  },
-  CALENDLY: {
-    label: "Calendly",
-    logo: "C",
-    color: "bg-teal-100 text-teal-700",
-  },
+interface SourceShare {
+  provider: string
+  pct: number
 }
 
-function StatusIcon({ status }: { status: string }) {
-  if (status === "ACTIVE") return <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-  if (status === "ERROR") return <AlertCircle className="h-3.5 w-3.5 text-amber-500" />
-  return <XCircle className="h-3.5 w-3.5 text-muted-foreground/40" />
-}
-
-interface ConnectedSourcesProps {
+interface TopSourcesProps {
   accounts: ConnectedAccountSummary[]
+  sourceShares?: SourceShare[]
 }
 
-export function ConnectedSources({ accounts }: ConnectedSourcesProps) {
+const PROVIDER_META: Record<string, { label: string; logo: string }> = {
+  STRIPE: { label: "Stripe", logo: "S" },
+  KIT: { label: "Kit", logo: "K" },
+  MANYCHAT: { label: "ManyChat", logo: "M" },
+  CALENDLY: { label: "Calendly", logo: "C" },
+}
+
+export function ConnectedSources({ accounts, sourceShares = [] }: TopSourcesProps) {
+  const connectedAccounts = accounts.filter((a) => a.status === "ACTIVE")
+
+  // Build share bar segments
+  const totalShare = sourceShares.reduce((s, x) => s + x.pct, 0)
+  const barColors = ["#0b0b0f", "#abc4ff", "#dde4f2", "#e6ecf8"]
+
   return (
-    <Card>
-      <CardHeader className="flex-row items-center justify-between pb-3">
-        <CardTitle>Connected Sources</CardTitle>
-        <Button variant="ghost" size="sm" asChild>
-          <Link href="/integrations" className="text-xs text-muted-foreground">
-            Manage
-          </Link>
-        </Button>
-      </CardHeader>
-      <CardContent className="pt-0">
-        <div className="flex flex-col gap-1">
-          {accounts.map((account) => {
-            const meta = PROVIDER_META[account.provider] ?? {
-              label: account.label,
-              logo: account.label[0],
-              color: "bg-surface-subtle text-muted-foreground",
-            }
-            const isConnected = account.status === "ACTIVE"
+    <div
+      className="flex flex-col"
+      style={{ border: "1px solid #edf2fb", borderRadius: "26px", padding: "20px" }}
+    >
+      <div className="flex items-start justify-between">
+        <div>
+          <h3 className="text-[16px] font-bold tracking-[-0.02em] text-cr-black m-0">
+            Top sources
+          </h3>
+          <p className="text-[13px] text-cr-text-3 mt-[5px] mb-0">
+            Where your contacts come from
+          </p>
+        </div>
+        <Link
+          href="/integrations"
+          className="text-[12.5px] font-semibold text-cr-text-3 hover:text-cr-black transition-colors"
+        >
+          Manage
+        </Link>
+      </div>
 
-            return (
+      {/* Share bar */}
+      {sourceShares.length > 0 && (
+        <div className="flex gap-1 mt-4 mb-1">
+          {sourceShares.map((s, i) => (
+            <div
+              key={s.provider}
+              style={{
+                flex: s.pct,
+                height: "8px",
+                borderRadius: "99px",
+                background: barColors[i % barColors.length],
+              }}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Source list */}
+      <div className="flex flex-col">
+        {accounts.map((account, i) => {
+          const meta = PROVIDER_META[account.provider] ?? {
+            label: account.label,
+            logo: account.label[0],
+          }
+          const isConnected = account.status === "ACTIVE"
+          const share = sourceShares.find((s) => s.provider === account.provider)
+
+          return (
+            <div
+              key={account.provider}
+              className="flex items-center gap-[11px]"
+              style={{
+                padding: i === 0 && sourceShares.length > 0 ? "13px 0" : "13px 0",
+                borderTop: "1px solid #f2f5fb",
+                marginTop: i === 0 ? "12px" : undefined,
+              }}
+            >
               <div
-                key={account.provider}
-                className="flex items-center gap-3 rounded-lg px-2 py-2.5 hover:bg-surface-subtle/60 transition-colors"
+                className="w-[34px] h-[34px] rounded-full flex items-center justify-center text-[13px] font-bold shrink-0"
+                style={{
+                  background: isConnected ? "#edf2fb" : "#f5f6f8",
+                  color: isConnected ? "#0b0b0f" : "#9aa2b1",
+                }}
               >
-                {/* Logo circle */}
+                {meta.logo}
+              </div>
+              <div className="min-w-0">
                 <div
-                  className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-xs font-bold ${meta.color}`}
+                  className="text-[14px] font-semibold leading-tight"
+                  style={{ color: isConnected ? "#0b0b0f" : "#7b8497" }}
                 >
-                  {meta.logo}
+                  {meta.label}
                 </div>
-
-                {/* Name + status */}
-                <div className="flex min-w-0 flex-1 flex-col">
-                  <span className="text-xs font-medium text-brand-navy">
-                    {meta.label}
-                  </span>
-                  {isConnected && account.lastSyncedAt ? (
-                    <span className="text-[10px] text-muted-foreground">
-                      Synced{" "}
-                      {formatDistanceToNow(new Date(account.lastSyncedAt), {
-                        addSuffix: true,
-                      })}
-                    </span>
-                  ) : (
-                    <span className="text-[10px] text-muted-foreground">
-                      {isConnected ? "Connected" : "Not connected"}
-                    </span>
-                  )}
-                </div>
-
-                {/* Status badge + optional sync button */}
-                <div className="flex items-center gap-2">
-                  {isConnected ? (
-                    <Badge variant="success" className="text-[10px]">
-                      Active
-                    </Badge>
-                  ) : account.status === "ERROR" ? (
-                    <Badge variant="warning" className="text-[10px]">
-                      Error
-                    </Badge>
-                  ) : (
-                    <Badge variant="secondary" className="text-[10px]">
-                      —
-                    </Badge>
-                  )}
-                  <StatusIcon status={account.status} />
+                <div className="text-[12px] text-cr-text-4">
+                  {isConnected && account.lastSyncedAt
+                    ? `Synced ${formatDistanceToNow(new Date(account.lastSyncedAt), { addSuffix: true })}`
+                    : "Not connected"}
                 </div>
               </div>
-            )
-          })}
-        </div>
-
-        {accounts.every((a) => a.status !== "ACTIVE") && (
-          <div className="mt-3 rounded-lg border border-dashed border-border p-3 text-center">
-            <p className="text-xs text-muted-foreground">
-              No integrations connected yet.{" "}
-              <Link
-                href="/integrations"
-                className="font-medium text-brand-indigo-500 hover:underline"
-              >
-                Connect your first →
-              </Link>
-            </p>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+              {isConnected && share ? (
+                <span
+                  className="ml-auto text-[12px] font-semibold rounded-full px-[10px] py-1"
+                  style={{ background: "#edf2fb" }}
+                >
+                  {share.pct}%
+                </span>
+              ) : !isConnected ? (
+                <Link
+                  href="/integrations"
+                  className="ml-auto text-[12.5px] font-semibold text-cr-black hover:bg-cr-blue-100 transition-colors"
+                  style={{
+                    border: "1px solid #dfe6f4",
+                    borderRadius: "99px",
+                    padding: "4px 11px",
+                  }}
+                >
+                  Connect
+                </Link>
+              ) : null}
+            </div>
+          )
+        })}
+      </div>
+    </div>
   )
 }

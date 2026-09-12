@@ -107,9 +107,9 @@ export function IntegrationCard({
         </CardHeader>
 
         <CardContent className="flex flex-col gap-3 pt-0">
-          <div className="rounded-lg border border-border bg-surface-subtle px-3 py-2">
-            <p className="text-[11px] text-muted-foreground">
-              <span className="font-medium text-brand-navy">Auth: </span>
+          <div className="rounded-lg border border-cr-blue-100 bg-cr-blue-50 px-3 py-2">
+            <p className="text-[11px] text-cr-text-3">
+              <span className="font-medium text-cr-black">Auth: </span>
               {authType === "oauth"
                 ? "OAuth 2.0 — click Connect to authorize via browser"
                 : "API key — paste your key from the platform settings"}

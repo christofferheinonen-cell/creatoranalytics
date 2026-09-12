@@ -14,8 +14,8 @@ export default function SignupPage() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-1.5">
-        <h1 className="text-xl font-bold text-brand-navy">Create your account</h1>
-        <p className="text-sm text-muted-foreground">
+        <h1 className="text-xl font-bold text-cr-black">Create your account</h1>
+        <p className="text-sm text-cr-text-3">
           Start understanding your creator funnel in minutes
         </p>
       </div>
@@ -74,7 +74,7 @@ export default function SignupPage() {
         Already have an account?{" "}
         <Link
           href="/login"
-          className="font-medium text-brand-indigo-500 hover:underline"
+          className="font-medium text-cr-blue-600 hover:underline"
         >
           Sign in
         </Link>

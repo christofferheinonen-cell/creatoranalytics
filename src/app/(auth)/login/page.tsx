@@ -14,9 +14,9 @@ export default function LoginPage() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-1.5">
-        <h1 className="text-xl font-bold text-brand-navy">Welcome back</h1>
-        <p className="text-sm text-muted-foreground">
-          Sign in to your CreatorAnalytics account
+        <h1 className="text-xl font-bold text-cr-black">Welcome back</h1>
+        <p className="text-sm text-cr-text-3">
+          Sign in to your Creatorly account
         </p>
       </div>
 
@@ -61,7 +61,7 @@ export default function LoginPage() {
         Don&apos;t have an account?{" "}
         <Link
           href="/signup"
-          className="font-medium text-brand-indigo-500 hover:underline"
+          className="font-medium text-cr-blue-600 hover:underline"
         >
           Sign up free
         </Link>

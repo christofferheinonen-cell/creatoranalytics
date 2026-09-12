@@ -1,15 +1,14 @@
 import type { Metadata } from "next"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { IntegrationCard } from "./IntegrationCard"
 import { ClearDataButton } from "./ClearDataButton"
 
 export const metadata: Metadata = { title: "Integrations" }
 
 const ERROR_MESSAGES: Record<string, string> = {
-  stripe_not_configured: "Stripe is not configured yet. Add STRIPE_CLIENT_ID and STRIPE_SECRET_KEY in Vercel environment variables.",
-  calendly_not_configured: "Calendly is not configured yet. Add CALENDLY_CLIENT_ID and CALENDLY_CLIENT_SECRET in Vercel environment variables.",
+  stripe_not_configured: "Stripe is not configured yet. Add STRIPE_CLIENT_ID and STRIPE_SECRET_KEY in environment variables.",
+  calendly_not_configured: "Calendly is not configured yet. Add CALENDLY_CLIENT_ID and CALENDLY_CLIENT_SECRET in environment variables.",
   stripe_denied: "Stripe connection was denied or cancelled.",
   stripe_token: "Failed to exchange Stripe token. Check your STRIPE_SECRET_KEY.",
   stripe_failed: "Stripe connection failed. Please try again.",
@@ -77,9 +76,7 @@ export default async function IntegrationsPage({
   })
 
   const syncLogs = await prisma.syncLog.findMany({
-    where: {
-      connectedAccount: { userId },
-    },
+    where: { connectedAccount: { userId } },
     orderBy: { startedAt: "desc" },
     take: 10,
     select: {
@@ -96,25 +93,34 @@ export default async function IntegrationsPage({
   const accountMap = new Map(connectedAccounts.map((a) => [a.provider, a]))
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-5" style={{ padding: "22px" }}>
+      {/* Header */}
       <div>
-        <h2 className="text-base font-semibold text-brand-navy">Integrations</h2>
-        <p className="text-xs text-muted-foreground">
+        <h1 className="text-[30px] font-bold tracking-[-0.04em] text-cr-black m-0">Integrations</h1>
+        <p className="text-[15px] text-cr-text-3 mt-[7px] mb-0">
           Connect your platforms to start pulling funnel data.
         </p>
       </div>
 
+      {/* Status banners */}
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-700">
+        <div
+          className="px-4 py-3 text-[13px] text-red-700"
+          style={{ border: "1px solid #fecaca", background: "#fef2f2", borderRadius: "16px" }}
+        >
           {ERROR_MESSAGES[error] ?? "Something went wrong. Please try again."}
         </div>
       )}
       {success && SUCCESS_MESSAGES[success] && (
-        <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-xs text-green-700">
+        <div
+          className="px-4 py-3 text-[13px] text-green-700"
+          style={{ border: "1px solid #bbf7d0", background: "#f0fdf4", borderRadius: "16px" }}
+        >
           {SUCCESS_MESSAGES[success]}
         </div>
       )}
 
+      {/* Integration cards */}
       <div className="grid gap-4 sm:grid-cols-2">
         {INTEGRATIONS.map((integration) => {
           const account = accountMap.get(integration.provider)
@@ -130,70 +136,68 @@ export default async function IntegrationsPage({
         })}
       </div>
 
-      <Card className="border-red-200">
-        <CardHeader>
-          <CardTitle className="text-red-700">Danger Zone</CardTitle>
-          <CardDescription>Permanently delete all contacts and funnel events from your account. Use this to wipe test or seeded data before going live.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ClearDataButton />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Sync History</CardTitle>
-          <CardDescription>Recent sync runs — status, events ingested, and errors.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {syncLogs.length === 0 ? (
-            <div className="py-6 text-center">
-              <p className="text-xs text-muted-foreground">
-                No sync runs yet. Connect an integration and run a sync to see history here.
-              </p>
-            </div>
-          ) : (
-            <div className="flex flex-col divide-y divide-border">
-              {syncLogs.map((log) => {
-                const providerKey = [...accountMap.entries()].find(([, a]) => a.id === log.connectedAccountId)?.[0]
-                const provider = providerKey ? accountMap.get(providerKey) : undefined
-                const errorMsg = log.errors
-                  ? typeof log.errors === "string"
-                    ? log.errors
-                    : JSON.stringify(log.errors)
-                  : null
-                return (
-                  <div key={log.id} className="flex items-center justify-between py-3 text-xs">
-                    <div className="flex items-center gap-3">
-                      <span
-                        className={`inline-flex h-2 w-2 rounded-full ${
-                          log.status === "SUCCESS"
-                            ? "bg-green-500"
-                            : log.status === "RUNNING"
-                            ? "bg-yellow-500"
-                            : "bg-red-500"
-                        }`}
-                      />
-                      <span className="font-medium text-brand-navy">
-                        {provider?.provider ?? log.connectedAccountId}
-                      </span>
-                      <span className="text-muted-foreground">
-                        {log.eventsIngested ?? 0} events
-                      </span>
-                      {errorMsg && (
-                        <span className="truncate max-w-[200px] text-red-600">{errorMsg}</span>
-                      )}
-                    </div>
-                    <span className="text-muted-foreground">
-                      {new Date(log.startedAt).toLocaleString()}
+      {/* Sync history */}
+      <section style={{ border: "1px solid #edf2fb", borderRadius: "26px", padding: "20px" }}>
+        <h3 className="text-[16px] font-bold tracking-[-0.02em] text-cr-black m-0 mb-[5px]">
+          Sync History
+        </h3>
+        <p className="text-[13px] text-cr-text-3 mb-[16px]">Recent sync runs — status, events ingested, and errors.</p>
+        {syncLogs.length === 0 ? (
+          <p className="text-[13.5px] text-cr-text-3 py-4 text-center">
+            No sync runs yet. Connect an integration to see history here.
+          </p>
+        ) : (
+          <div className="flex flex-col">
+            {syncLogs.map((log, i) => {
+              const providerKey = [...accountMap.entries()].find(([, a]) => a.id === log.connectedAccountId)?.[0]
+              const errorMsg = log.errors
+                ? typeof log.errors === "string" ? log.errors : JSON.stringify(log.errors)
+                : null
+              return (
+                <div
+                  key={log.id}
+                  className="flex items-center justify-between py-3 text-[12px]"
+                  style={{ borderTop: i > 0 ? "1px solid #f2f5fb" : "none" }}
+                >
+                  <div className="flex items-center gap-3">
+                    <span
+                      className="inline-flex h-2 w-2 rounded-full shrink-0"
+                      style={{
+                        background:
+                          log.status === "SUCCESS" ? "#22c55e"
+                            : log.status === "RUNNING" ? "#eab308"
+                            : "#ef4444",
+                      }}
+                    />
+                    <span className="font-semibold text-cr-black">
+                      {providerKey ?? log.connectedAccountId}
                     </span>
+                    <span className="text-cr-text-3">{log.eventsIngested ?? 0} events</span>
+                    {errorMsg && (
+                      <span className="truncate max-w-[200px] text-red-600">{errorMsg}</span>
+                    )}
                   </div>
-                )
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                  <span className="text-cr-text-4">
+                    {new Date(log.startedAt).toLocaleString()}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </section>
+
+      {/* Danger zone */}
+      <section
+        style={{ border: "1px solid #fecaca", borderRadius: "26px", padding: "20px" }}
+      >
+        <h3 className="text-[16px] font-bold text-red-700 m-0 mb-[5px]">Danger Zone</h3>
+        <p className="text-[13px] text-cr-text-3 mb-[16px]">
+          Permanently delete all contacts and funnel events from your account.
+          Use this to wipe test or seeded data before going live.
+        </p>
+        <ClearDataButton />
+      </section>
     </div>
   )
 }

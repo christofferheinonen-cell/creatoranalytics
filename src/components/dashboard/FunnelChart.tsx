@@ -1,87 +1,76 @@
 "use client"
 
-import { ArrowDown } from "lucide-react"
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
-import { ChartCard } from "@/components/shared/ChartCard"
-import { formatNumber } from "@/lib/utils"
+import Link from "next/link"
+import { useState } from "react"
+import { Info } from "lucide-react"
 import type { FunnelStage } from "@/types"
 
-// Source → display color token
-const SOURCE_COLORS: Record<string, string> = {
-  manychat: "bg-orange-400",
-  kit: "bg-brand-teal-500",
-  stripe: "bg-brand-indigo-500",
-  calendly: "bg-violet-500",
-  "kit/manychat": "bg-brand-teal-400",
-  mixed: "bg-slate-400",
-}
-
-function NoData() {
-  return (
-    <div className="flex h-40 items-center justify-center">
-      <span className="text-sm font-semibold uppercase tracking-widest text-muted-foreground/40">
-        No Data
-      </span>
-    </div>
-  )
-}
-
 function FunnelBar({ stages }: { stages: FunnelStage[] }) {
-  if (stages.length === 0) return <NoData />
+  if (stages.length === 0) {
+    return (
+      <div className="py-8 text-center">
+        <p className="text-[13.5px] text-cr-text-3">No funnel data yet. Connect an integration to see your funnel.</p>
+      </div>
+    )
+  }
 
-  const topCount = stages[0].count
+  const top = stages[0].count
 
   return (
     <div className="flex flex-col">
       {stages.map((stage, i) => {
-        const widthPct = (stage.count / topCount) * 100
-        const prevCount = i > 0 ? stages[i - 1].count : null
-        const convRate =
-          prevCount !== null && prevCount > 0
-            ? ((stage.count / prevCount) * 100).toFixed(1)
-            : null
+        const pct = top > 0 ? (stage.count / top) * 100 : 0
+        const isEmpty = stage.count === 0
 
         return (
-          <div key={stage.stage}>
-            {/* Conversion rate connector */}
-            {convRate && (
-              <div className="flex items-center gap-1.5 py-1.5 pl-[148px]">
-                <ArrowDown className="h-3 w-3 text-muted-foreground/50" />
-                <span className="text-[11px] font-medium text-muted-foreground">
-                  {convRate}% converted
-                </span>
-              </div>
-            )}
-
-            {/* Stage row */}
-            <div className="flex items-center gap-3">
-              {/* Label — fixed width right-aligned */}
-              <div className="w-36 flex-shrink-0 text-right">
-                <span className="text-xs font-medium text-muted-foreground">
-                  {stage.label}
-                </span>
-              </div>
-
-              {/* Bar + count */}
-              <div className="flex flex-1 items-center gap-3 min-w-0">
-                <div className="relative flex h-8 flex-1 items-center">
-                  <div
-                    className="h-full rounded-md transition-all duration-500"
-                    style={{
-                      width: `${Math.max(widthPct, 2)}%`,
-                      background: "linear-gradient(90deg, #6366F1 0%, #818CF8 100%)",
-                    }}
-                  />
-                </div>
-                <div className="flex w-20 flex-shrink-0 items-center gap-1.5">
-                  <span className="text-sm font-semibold text-brand-navy">
-                    {formatNumber(stage.count)}
-                  </span>
-                  <span className="text-[10px] text-muted-foreground">
-                    {((stage.count / topCount) * 100).toFixed(0)}%
-                  </span>
-                </div>
-              </div>
+          <div
+            key={stage.stage}
+            className="grid items-center gap-[14px]"
+            style={{
+              gridTemplateColumns: "minmax(110px, 1fr) minmax(70px, 2.2fr) 76px",
+              padding: "14px 0",
+              borderTop: "1px solid #f2f5fb",
+            }}
+          >
+            <div className="flex items-center gap-[10px] min-w-0">
+              <span className="text-[11.5px] font-bold text-cr-text-5">
+                {String(i + 1).padStart(2, "0")}
+              </span>
+              <span className="text-[14px] font-semibold text-cr-black truncate">
+                {stage.label}
+              </span>
+            </div>
+            <div
+              className="h-[30px] rounded-full overflow-hidden"
+              style={{ background: "#f5f8fe" }}
+            >
+              <div
+                className="h-full rounded-full transition-all duration-500"
+                style={{
+                  width: `${Math.max(pct, isEmpty ? 4 : pct)}%`,
+                  background: isEmpty ? "#dde4f2" : i === 0 ? "#abc4ff" : "#c1d3fe",
+                }}
+              />
+            </div>
+            <div className="flex items-center justify-end gap-2">
+              <span
+                className={
+                  isEmpty
+                    ? "text-[15px] font-bold text-cr-text-4"
+                    : "text-[15px] font-bold text-cr-black"
+                }
+              >
+                {stage.count}
+              </span>
+              <span
+                className="text-[12px] font-semibold rounded-full px-2 py-[3px]"
+                style={{
+                  background: isEmpty ? "#f5f6f8" : "#e2eafc",
+                  color: isEmpty ? "#7b8497" : "#0b0b0f",
+                }}
+              >
+                {Math.round(pct)}%
+              </span>
             </div>
           </div>
         )
@@ -90,60 +79,96 @@ function FunnelBar({ stages }: { stages: FunnelStage[] }) {
   )
 }
 
+type TabKey = "all" | "freebie" | "call"
+
 interface FunnelChartProps {
   freebbieFunnel: FunnelStage[]
   callFunnel: FunnelStage[]
   combinedFunnel: FunnelStage[]
 }
 
-export function FunnelChart({
-  freebbieFunnel,
-  callFunnel,
-  combinedFunnel,
-}: FunnelChartProps) {
-  const allTopCount = combinedFunnel[0]?.count ?? 0
-  const allPurchased = combinedFunnel[combinedFunnel.length - 1]?.count ?? 0
-  const overallConversion =
-    allTopCount > 0 ? ((allPurchased / allTopCount) * 100).toFixed(2) : "—"
+export function FunnelChart({ freebbieFunnel, callFunnel, combinedFunnel }: FunnelChartProps) {
+  const [tab, setTab] = useState<TabKey>("all")
+  const stageCount = combinedFunnel.length
+
+  const stages: Record<TabKey, FunnelStage[]> = {
+    all: combinedFunnel,
+    freebie: freebbieFunnel,
+    call: callFunnel,
+  }
+
+  const hasCalendly = callFunnel.some((s) => s.stage === "CALL_SCHEDULED" && s.count > 0)
 
   return (
-    <ChartCard
-      title="Funnel Performance"
-      description={`Overall conversion: ${overallConversion}% · top-of-funnel to revenue`}
-      actions={
-        <span className="rounded-full bg-brand-indigo-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-brand-indigo-600">
-          Live data
-        </span>
-      }
-    >
-      <Tabs defaultValue="all">
-        <TabsList className="mb-5">
-          <TabsTrigger value="all">All Funnels</TabsTrigger>
-          <TabsTrigger value="freebie">Freebie Funnel</TabsTrigger>
-          <TabsTrigger value="call">Call Funnel</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="all">
-          <FunnelBar stages={combinedFunnel} />
-          <p className="mt-4 text-[11px] text-muted-foreground">
-            Combined view showing aggregate top-of-funnel to revenue across both funnel types.
+    <section style={{ border: "1px solid #edf2fb", borderRadius: "26px" }}>
+      {/* Header */}
+      <div
+        className="flex items-start justify-between gap-4 flex-wrap"
+        style={{ padding: "20px 20px 16px" }}
+      >
+        <div>
+          <div className="flex items-center gap-[10px]">
+            <h2 className="text-[17px] font-bold tracking-[-0.025em] text-cr-black m-0">
+              Funnel performance
+            </h2>
+            <span
+              className="text-[11.5px] font-semibold text-cr-text-2 rounded-full px-[9px] py-[3px]"
+              style={{ background: "#edf2fb" }}
+            >
+              {stageCount} stages
+            </span>
+          </div>
+          <p className="text-[13.5px] text-cr-text-3 mt-[5px] mb-0">
+            Top of funnel to revenue, last 30 days.
           </p>
-        </TabsContent>
+        </div>
 
-        <TabsContent value="freebie">
-          <FunnelBar stages={freebbieFunnel} />
-          <p className="mt-4 text-[11px] text-muted-foreground">
-            Comment → DM → Freebie → Email subscriber → Self-serve purchase
-          </p>
-        </TabsContent>
+        {/* Tab switcher */}
+        <div
+          className="flex overflow-hidden"
+          style={{ border: "1px solid #edf2fb", borderRadius: "99px" }}
+        >
+          {(["all", "freebie", "call"] as TabKey[]).map((t, i) => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className="border-none font-[inherit] text-[12.5px] font-semibold px-[15px] py-2 cursor-pointer transition-colors capitalize"
+              style={{
+                background: tab === t ? "#0b0b0f" : "#fff",
+                color: tab === t ? "#fff" : "#4a5164",
+                borderLeft: i > 0 ? "1px solid #edf2fb" : "none",
+              }}
+            >
+              {t === "all" ? "All" : t === "freebie" ? "Freebie" : "Call"}
+            </button>
+          ))}
+        </div>
+      </div>
 
-        <TabsContent value="call">
-          <FunnelBar stages={callFunnel} />
-          <p className="mt-4 text-[11px] text-muted-foreground">
-            Comment → DM → Video viewed → Call booked → Call completed → Payment collected
-          </p>
-        </TabsContent>
-      </Tabs>
-    </ChartCard>
+      {/* Funnel bars */}
+      <div style={{ padding: "0 20px 8px" }}>
+        <FunnelBar stages={stages[tab]} />
+      </div>
+
+      {/* Tip */}
+      {!hasCalendly && (
+        <div
+          className="flex items-center gap-3 flex-wrap"
+          style={{ margin: "0 20px 20px", padding: "14px 16px", background: "#f7f9fe", borderRadius: "18px" }}
+        >
+          <Info className="shrink-0 h-[18px] w-[18px] text-cr-black" strokeWidth={1.5} />
+          <span className="text-[13.5px] text-cr-text-2 flex-1 min-w-[200px]">
+            Both funnels convert to email but drop off before a call.
+          </span>
+          <Link
+            href="/integrations"
+            className="text-[13px] font-semibold text-white rounded-full px-[15px] py-2 whitespace-nowrap hover:opacity-90 transition-opacity"
+            style={{ background: "#0b0b0f" }}
+          >
+            Connect Calendly
+          </Link>
+        </div>
+      )}
+    </section>
   )
 }
