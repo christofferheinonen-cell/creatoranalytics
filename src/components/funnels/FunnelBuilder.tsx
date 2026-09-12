@@ -1,0 +1,700 @@
+"use client"
+
+import { useRef, useState, useCallback, useEffect } from "react"
+import Link from "next/link"
+import {
+  ArrowLeft,
+  Plus,
+  X,
+  MessageCircle,
+  Tag,
+  Clock,
+  Mail,
+  Calendar,
+  CreditCard,
+  GitBranch,
+  DollarSign,
+  Phone,
+  UserCheck,
+  Shuffle,
+  MessageSquare,
+  Image,
+  Megaphone,
+  Zap,
+  Save,
+} from "lucide-react"
+import { cn } from "@/lib/utils"
+import type { MockBuilderNode, MockNodeType } from "@/lib/mock-data"
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const NODE_W = 240
+const NODE_H = 86
+
+const NODE_CFG: Record<MockNodeType, {
+  label: string
+  color: string
+  headerBg: string
+  dot: string
+  ring: string
+}> = {
+  trigger:     { label: "Trigger",     color: "#059669", headerBg: "#ECFDF5", dot: "#10B981", ring: "#34D399" },
+  action:      { label: "Action",      color: "#2563EB", headerBg: "#EFF6FF", dot: "#3B82F6", ring: "#60A5FA" },
+  condition:   { label: "Condition",   color: "#D97706", headerBg: "#FFFBEB", dot: "#F59E0B", ring: "#FCD34D" },
+  integration: { label: "Integration", color: "#7C3AED", headerBg: "#F5F3FF", dot: "#8B5CF6", ring: "#A78BFA" },
+  goal:        { label: "Goal",        color: "#DB2777", headerBg: "#FDF2F8", dot: "#EC4899", ring: "#F472B6" },
+}
+
+// ─── Palette definition ───────────────────────────────────────────────────────
+
+interface PaletteItem {
+  type: MockNodeType
+  title: string
+  subtitle: string
+  Icon: React.ElementType
+}
+
+const PALETTE: { category: string; items: PaletteItem[] }[] = [
+  {
+    category: "Triggers",
+    items: [
+      { type: "trigger", title: "Instagram Comment", subtitle: "Keyword triggers DM flow",  Icon: MessageSquare },
+      { type: "trigger", title: "DM Received",        subtitle: "Incoming direct message",   Icon: MessageCircle },
+      { type: "trigger", title: "Story Reply",         subtitle: "Reply on your story",       Icon: Image },
+    ],
+  },
+  {
+    category: "Actions",
+    items: [
+      { type: "action", title: "Send DM",          subtitle: "Automated message reply", Icon: MessageCircle },
+      { type: "action", title: "Add Tag",           subtitle: "Label this contact",      Icon: Tag },
+      { type: "action", title: "Wait / Delay",      subtitle: "Time-based pause",        Icon: Clock },
+      { type: "action", title: "Send Announcement", subtitle: "Broadcast to list",       Icon: Megaphone },
+    ],
+  },
+  {
+    category: "Conditions",
+    items: [
+      { type: "condition", title: "If / Else",  subtitle: "Branch by condition", Icon: GitBranch },
+      { type: "condition", title: "A/B Split",  subtitle: "Split-test traffic",  Icon: Shuffle },
+    ],
+  },
+  {
+    category: "Integrations",
+    items: [
+      { type: "integration", title: "Add to Kit",       subtitle: "Email nurture sequence", Icon: Mail },
+      { type: "integration", title: "Book Call",         subtitle: "Calendly scheduling",    Icon: Calendar },
+      { type: "integration", title: "Stripe Checkout",   subtitle: "Payment link",           Icon: CreditCard },
+    ],
+  },
+  {
+    category: "Goals",
+    items: [
+      { type: "goal", title: "Purchase Made",    subtitle: "Stripe payment confirmed", Icon: DollarSign },
+      { type: "goal", title: "Call Booked",       subtitle: "Calendly booking done",    Icon: Phone },
+      { type: "goal", title: "Email Subscribed",  subtitle: "Kit subscriber added",     Icon: UserCheck },
+    ],
+  },
+]
+
+// Quick-add menu shown when clicking "+" on a node
+const QUICK_ADD: { group: string; items: PaletteItem[] }[] = [
+  {
+    group: "Continue flow",
+    items: [
+      { type: "action",      title: "Send DM",          subtitle: "Automated reply",       Icon: MessageCircle },
+      { type: "action",      title: "Wait / Delay",      subtitle: "Time-based pause",      Icon: Clock },
+      { type: "integration", title: "Add to Kit",        subtitle: "Email nurture",         Icon: Mail },
+      { type: "integration", title: "Book Call",         subtitle: "Calendly scheduling",   Icon: Calendar },
+      { type: "integration", title: "Stripe Checkout",   subtitle: "Payment link",          Icon: CreditCard },
+    ],
+  },
+  {
+    group: "Logic",
+    items: [
+      { type: "condition", title: "If / Else", subtitle: "Branch condition", Icon: GitBranch },
+      { type: "condition", title: "A/B Split", subtitle: "Split traffic",    Icon: Shuffle },
+    ],
+  },
+  {
+    group: "Goals",
+    items: [
+      { type: "goal", title: "Purchase Made",   subtitle: "Stripe payment", Icon: DollarSign },
+      { type: "goal", title: "Call Booked",      subtitle: "Calendly booking", Icon: Phone },
+    ],
+  },
+]
+
+// ─── Types ─────────────────────────────────────────────────────────────────────
+
+type DragState =
+  | { kind: "node"; nodeId: string; startMX: number; startMY: number; startNX: number; startNY: number }
+  | { kind: "canvas"; startMX: number; startMY: number; startPX: number; startPY: number }
+  | null
+
+interface AddMenu {
+  fromNodeId: string
+  canvasX: number
+  canvasY: number
+}
+
+// ─── Node component ────────────────────────────────────────────────────────────
+
+function FlowNode({
+  node,
+  panX,
+  panY,
+  isSelected,
+  isConnecting,
+  onMouseDown,
+  onNodeClick,
+  onConnectStart,
+  onPlusClick,
+  onDelete,
+}: {
+  node: MockBuilderNode
+  panX: number
+  panY: number
+  isSelected: boolean
+  isConnecting: boolean
+  onMouseDown: (e: React.MouseEvent) => void
+  onNodeClick: (e: React.MouseEvent) => void
+  onConnectStart: (e: React.MouseEvent) => void
+  onPlusClick: (e: React.MouseEvent) => void
+  onDelete: () => void
+}) {
+  const cfg = NODE_CFG[node.type]
+  const screenX = node.x + panX
+  const screenY = node.y + panY
+
+  return (
+    <div
+      style={{
+        position: "absolute",
+        top: 0,
+        left: 0,
+        transform: `translate(${screenX}px, ${screenY}px)`,
+        width: NODE_W,
+        zIndex: isSelected ? 20 : 2,
+      }}
+      className="group/node"
+    >
+      {/* Input handle (left) */}
+      <div
+        style={{ backgroundColor: cfg.dot }}
+        className="absolute -left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 rounded-full border-2 border-white shadow-sm z-10"
+      />
+
+      {/* Card */}
+      <div
+        onMouseDown={onMouseDown}
+        onClick={onNodeClick}
+        style={{
+          borderColor: isSelected ? "#6366F1" : isConnecting ? cfg.ring : "transparent",
+          boxShadow: isSelected
+            ? "0 0 0 2px #6366F120, 0 4px 12px rgb(0 0 0 / 0.10)"
+            : "0 1px 4px rgb(0 0 0 / 0.08), 0 0 0 1px rgb(0 0 0 / 0.05)",
+        }}
+        className={cn(
+          "relative rounded-xl border-2 bg-white transition-shadow cursor-grab active:cursor-grabbing select-none",
+          "hover:shadow-card-hover"
+        )}
+      >
+        {/* Header */}
+        <div
+          style={{ backgroundColor: cfg.headerBg }}
+          className="flex items-center gap-2 px-3 py-2 rounded-t-[10px]"
+        >
+          <div
+            style={{ backgroundColor: cfg.color }}
+            className="flex h-4 w-4 shrink-0 items-center justify-center rounded"
+          >
+            <Zap className="h-2.5 w-2.5 text-white" />
+          </div>
+          <span
+            style={{ color: cfg.color }}
+            className="text-[10px] font-bold uppercase tracking-widest"
+          >
+            {cfg.label}
+          </span>
+        </div>
+
+        {/* Body */}
+        <div className="px-3 py-2.5">
+          <p className="text-sm font-semibold text-brand-navy leading-snug">{node.title}</p>
+          <p className="mt-0.5 text-[11px] text-muted-foreground leading-snug">{node.subtitle}</p>
+        </div>
+      </div>
+
+      {/* Output handle + connect dot (right) */}
+      <button
+        onMouseDown={(e) => { e.stopPropagation(); onConnectStart(e) }}
+        style={{ backgroundColor: cfg.dot }}
+        className="absolute -right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 rounded-full border-2 border-white shadow-sm z-10 cursor-crosshair hover:scale-125 transition-transform"
+        title="Drag to connect"
+      />
+
+      {/* Plus button below node */}
+      <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center" style={{ top: NODE_H }}>
+        <div className="h-4 w-px" style={{ backgroundColor: cfg.dot + "60" }} />
+        <button
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={(e) => { e.stopPropagation(); onPlusClick(e) }}
+          style={{ borderColor: cfg.dot }}
+          className="flex h-6 w-6 items-center justify-center rounded-full border-2 bg-white shadow-sm hover:scale-110 transition-transform z-10"
+          title="Add next step"
+        >
+          <Plus className="h-3 w-3" style={{ color: cfg.dot }} />
+        </button>
+      </div>
+
+      {/* Delete button (visible when selected) */}
+      {isSelected && (
+        <button
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={(e) => { e.stopPropagation(); onDelete() }}
+          className="absolute -top-3 -right-3 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white shadow-sm hover:bg-red-600 transition-colors z-30"
+        >
+          <X className="h-3 w-3" />
+        </button>
+      )}
+    </div>
+  )
+}
+
+// ─── Quick-add menu ────────────────────────────────────────────────────────────
+
+function QuickAddMenu({
+  x,
+  y,
+  onSelect,
+  onDismiss,
+}: {
+  x: number
+  y: number
+  onSelect: (item: PaletteItem) => void
+  onDismiss: () => void
+}) {
+  return (
+    <>
+      {/* Backdrop */}
+      <div className="fixed inset-0 z-40" onMouseDown={onDismiss} />
+      <div
+        style={{ position: "absolute", left: x, top: y, zIndex: 50, width: 248 }}
+        className="rounded-xl border border-border bg-white shadow-panel overflow-hidden"
+      >
+        <div className="border-b border-border px-3 py-2">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            Add next step
+          </p>
+        </div>
+        <div className="max-h-72 overflow-y-auto py-1">
+          {QUICK_ADD.map((group) => (
+            <div key={group.group}>
+              <p className="px-3 pt-2 pb-1 text-[9px] font-bold uppercase tracking-widest text-muted-foreground/50">
+                {group.group}
+              </p>
+              {group.items.map((item) => {
+                const Icon = item.Icon
+                const cfg = NODE_CFG[item.type]
+                return (
+                  <button
+                    key={item.title}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onClick={() => onSelect(item)}
+                    className="flex w-full items-center gap-2.5 px-3 py-2 text-left hover:bg-surface-subtle transition-colors"
+                  >
+                    <div
+                      style={{ backgroundColor: cfg.headerBg }}
+                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg"
+                    >
+                      <Icon className="h-3.5 w-3.5" style={{ color: cfg.color }} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-brand-navy">{item.title}</p>
+                      <p className="text-[10px] text-muted-foreground">{item.subtitle}</p>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
+  )
+}
+
+// ─── Main builder ──────────────────────────────────────────────────────────────
+
+export function FunnelBuilder({
+  initialNodes,
+  funnelName: initialName,
+}: {
+  initialNodes: MockBuilderNode[]
+  funnelName: string
+}) {
+  const canvasRef = useRef<HTMLDivElement>(null)
+  const [nodes, setNodes] = useState<MockBuilderNode[]>(initialNodes)
+  const [panX, setPanX] = useState(0)
+  const [panY, setPanY] = useState(0)
+  const [drag, setDrag] = useState<DragState>(null)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [connectingFrom, setConnectingFrom] = useState<string | null>(null)
+  const [mouseCanvasX, setMouseCanvasX] = useState(0)
+  const [mouseCanvasY, setMouseCanvasY] = useState(0)
+  const [addMenu, setAddMenu] = useState<AddMenu | null>(null)
+  const [funnelName, setFunnelName] = useState(initialName)
+  const [saved, setSaved] = useState(false)
+
+  // Dismiss menu / cancel connecting on Escape
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setAddMenu(null)
+        setConnectingFrom(null)
+        setSelectedId(null)
+      }
+      if ((e.key === "Delete" || e.key === "Backspace") && selectedId) {
+        handleDeleteNode(selectedId)
+      }
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedId])
+
+  const handleDeleteNode = useCallback((nodeId: string) => {
+    setNodes((prev) =>
+      prev
+        .filter((n) => n.id !== nodeId)
+        .map((n) => ({ ...n, outputs: n.outputs.filter((id) => id !== nodeId) }))
+    )
+    setSelectedId(null)
+  }, [])
+
+  // ── Mouse handlers ─────────────────────────────────────────────────────────
+
+  const handleCanvasMouseDown = (e: React.MouseEvent) => {
+    if ((e.target as Element).closest(".flow-node")) return
+    setDrag({ kind: "canvas", startMX: e.clientX, startMY: e.clientY, startPX: panX, startPY: panY })
+    setSelectedId(null)
+    setAddMenu(null)
+    if (connectingFrom) setConnectingFrom(null)
+  }
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    // Track mouse for ghost line
+    if (canvasRef.current) {
+      const r = canvasRef.current.getBoundingClientRect()
+      setMouseCanvasX(e.clientX - r.left)
+      setMouseCanvasY(e.clientY - r.top)
+    }
+
+    if (!drag) return
+
+    if (drag.kind === "node") {
+      const dx = e.clientX - drag.startMX
+      const dy = e.clientY - drag.startMY
+      setNodes((prev) =>
+        prev.map((n) =>
+          n.id === drag.nodeId ? { ...n, x: drag.startNX + dx, y: drag.startNY + dy } : n
+        )
+      )
+    }
+
+    if (drag.kind === "canvas") {
+      const dx = e.clientX - drag.startMX
+      const dy = e.clientY - drag.startMY
+      setPanX(drag.startPX + dx)
+      setPanY(drag.startPY + dy)
+    }
+  }
+
+  const handleMouseUp = () => setDrag(null)
+
+  const handleNodeMouseDown = (e: React.MouseEvent, node: MockBuilderNode) => {
+    e.stopPropagation()
+    setDrag({ kind: "node", nodeId: node.id, startMX: e.clientX, startMY: e.clientY, startNX: node.x, startNY: node.y })
+    setSelectedId(node.id)
+    setAddMenu(null)
+  }
+
+  const handleNodeClick = (e: React.MouseEvent, nodeId: string) => {
+    e.stopPropagation()
+    if (connectingFrom && connectingFrom !== nodeId) {
+      setNodes((prev) =>
+        prev.map((n) =>
+          n.id === connectingFrom && !n.outputs.includes(nodeId)
+            ? { ...n, outputs: [...n.outputs, nodeId] }
+            : n
+        )
+      )
+      setConnectingFrom(null)
+    }
+  }
+
+  const handleConnectStart = (e: React.MouseEvent, nodeId: string) => {
+    e.stopPropagation()
+    setConnectingFrom(nodeId)
+    setAddMenu(null)
+  }
+
+  const handlePlusClick = (e: React.MouseEvent, node: MockBuilderNode) => {
+    e.stopPropagation()
+    const menuX = node.x + panX + NODE_W + 16
+    const menuY = node.y + panY + NODE_H / 2 - 80
+    setAddMenu({ fromNodeId: node.id, canvasX: menuX, canvasY: menuY })
+    setConnectingFrom(null)
+  }
+
+  const handleQuickAddSelect = (item: PaletteItem) => {
+    if (!addMenu) return
+    const fromNode = nodes.find((n) => n.id === addMenu.fromNodeId)
+    if (!fromNode) return
+    const newId = `node-${Date.now()}`
+    const newNode: MockBuilderNode = {
+      id: newId,
+      type: item.type,
+      x: fromNode.x + NODE_W + 80,
+      y: fromNode.y,
+      title: item.title,
+      subtitle: item.subtitle,
+      outputs: [],
+    }
+    setNodes((prev) => [
+      ...prev.map((n) =>
+        n.id === addMenu.fromNodeId ? { ...n, outputs: [...n.outputs, newId] } : n
+      ),
+      newNode,
+    ])
+    setAddMenu(null)
+  }
+
+  const addNodeFromPalette = (item: PaletteItem) => {
+    const canvas = canvasRef.current
+    const cx = canvas ? canvas.clientWidth / 2 - panX - NODE_W / 2 : 200
+    const cy = canvas ? canvas.clientHeight / 2 - panY - NODE_H / 2 : 200
+    setNodes((prev) => [
+      ...prev,
+      { id: `node-${Date.now()}`, type: item.type, x: cx, y: cy, title: item.title, subtitle: item.subtitle, outputs: [] },
+    ])
+  }
+
+  const handleSave = () => {
+    setSaved(true)
+    setTimeout(() => setSaved(false), 2000)
+  }
+
+  // ── Compute SVG connections ────────────────────────────────────────────────
+
+  const connections = nodes.flatMap((node) =>
+    node.outputs
+      .map((targetId) => {
+        const to = nodes.find((n) => n.id === targetId)
+        return to ? { from: node, to } : null
+      })
+      .filter(Boolean)
+  ) as { from: MockBuilderNode; to: MockBuilderNode }[]
+
+  const ghostFrom = connectingFrom ? nodes.find((n) => n.id === connectingFrom) : null
+
+  // ── Render ─────────────────────────────────────────────────────────────────
+
+  return (
+    // Break out of dashboard's px-6 py-6 container, fill remaining viewport
+    <div
+      className="-mx-6 -my-6 flex overflow-hidden"
+      style={{ height: "calc(100vh - 57px)" }}
+    >
+      {/* ── Left palette ──────────────────────────────────────────────── */}
+      <aside className="flex w-[268px] shrink-0 flex-col border-r border-border bg-surface-card overflow-hidden">
+        <div className="border-b border-border px-4 py-3">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            Blocks
+          </p>
+        </div>
+        <div className="flex-1 overflow-y-auto py-2">
+          {PALETTE.map((group) => (
+            <div key={group.category} className="mb-1">
+              <p className="px-4 pt-3 pb-1.5 text-[9px] font-bold uppercase tracking-widest text-muted-foreground/50">
+                {group.category}
+              </p>
+              {group.items.map((item) => {
+                const Icon = item.Icon
+                const cfg = NODE_CFG[item.type]
+                return (
+                  <button
+                    key={item.title}
+                    onClick={() => addNodeFromPalette(item)}
+                    className="flex w-full items-center gap-3 px-4 py-2 text-left hover:bg-surface-subtle transition-colors"
+                  >
+                    <div
+                      style={{ backgroundColor: cfg.headerBg }}
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
+                    >
+                      <Icon className="h-4 w-4" style={{ color: cfg.color }} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-brand-navy">{item.title}</p>
+                      <p className="truncate text-[10px] text-muted-foreground">{item.subtitle}</p>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          ))}
+        </div>
+      </aside>
+
+      {/* ── Right: toolbar + canvas ───────────────────────────────────── */}
+      <div className="flex flex-1 flex-col overflow-hidden">
+        {/* Toolbar */}
+        <div className="flex h-11 shrink-0 items-center gap-3 border-b border-border bg-surface-card px-4">
+          <Link
+            href="/funnels"
+            className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-surface-subtle hover:text-brand-navy transition-colors"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            Funnels
+          </Link>
+
+          <div className="h-4 w-px bg-border" />
+
+          <input
+            value={funnelName}
+            onChange={(e) => setFunnelName(e.target.value)}
+            className="flex-1 bg-transparent text-sm font-semibold text-brand-navy outline-none placeholder:text-muted-foreground"
+            placeholder="Untitled Funnel"
+          />
+
+          <span className="text-[11px] text-muted-foreground">
+            {nodes.length} {nodes.length === 1 ? "step" : "steps"}
+          </span>
+
+          {connectingFrom && (
+            <span className="rounded-full bg-brand-indigo-50 px-2.5 py-1 text-[10px] font-semibold text-brand-indigo-600">
+              Click a node to connect · Esc to cancel
+            </span>
+          )}
+
+          <button
+            onClick={handleSave}
+            className={cn(
+              "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors",
+              saved
+                ? "bg-emerald-100 text-emerald-700"
+                : "bg-brand-indigo-500 text-white hover:bg-brand-indigo-600"
+            )}
+          >
+            <Save className="h-3.5 w-3.5" />
+            {saved ? "Saved!" : "Save"}
+          </button>
+        </div>
+
+        {/* Canvas */}
+        <div
+          ref={canvasRef}
+          className="relative flex-1 overflow-hidden"
+          style={{ cursor: drag?.kind === "canvas" ? "grabbing" : connectingFrom ? "crosshair" : "default" }}
+          onMouseDown={handleCanvasMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
+        >
+          {/* Dot grid background — moves with pan */}
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={{
+              backgroundImage: "radial-gradient(circle, #CBD5E1 1px, transparent 1px)",
+              backgroundSize: "24px 24px",
+              backgroundPosition: `${panX % 24}px ${panY % 24}px`,
+            }}
+          />
+
+          {/* Empty-state hint */}
+          {nodes.length === 0 && (
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+              <p className="text-sm text-muted-foreground/40 font-medium">
+                Click a block on the left to start building
+              </p>
+            </div>
+          )}
+
+          {/* SVG layer — connections & ghost */}
+          <svg className="pointer-events-none absolute inset-0 h-full w-full overflow-visible">
+            <defs>
+              <marker id="arrow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+                <polygon points="0 0, 8 3, 0 6" fill="#6366F1" opacity="0.8" />
+              </marker>
+              <marker id="arrow-ghost" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+                <polygon points="0 0, 8 3, 0 6" fill="#6366F1" opacity="0.4" />
+              </marker>
+            </defs>
+
+            {/* Real connections */}
+            {connections.map(({ from, to }) => {
+              const x1 = from.x + panX + NODE_W
+              const y1 = from.y + panY + NODE_H / 2
+              const x2 = to.x + panX
+              const y2 = to.y + panY + NODE_H / 2
+              const cx1 = x1 + Math.max(60, Math.abs(x2 - x1) * 0.4)
+              const cx2 = x2 - Math.max(60, Math.abs(x2 - x1) * 0.4)
+              return (
+                <path
+                  key={`${from.id}-${to.id}`}
+                  d={`M ${x1} ${y1} C ${cx1} ${y1}, ${cx2} ${y2}, ${x2} ${y2}`}
+                  stroke="#6366F1"
+                  strokeWidth={2}
+                  strokeOpacity={0.7}
+                  fill="none"
+                  markerEnd="url(#arrow)"
+                />
+              )
+            })}
+
+            {/* Ghost connection line */}
+            {ghostFrom && (
+              <path
+                d={`M ${ghostFrom.x + panX + NODE_W} ${ghostFrom.y + panY + NODE_H / 2} C ${ghostFrom.x + panX + NODE_W + 80} ${ghostFrom.y + panY + NODE_H / 2}, ${mouseCanvasX - 80} ${mouseCanvasY}, ${mouseCanvasX} ${mouseCanvasY}`}
+                stroke="#6366F1"
+                strokeWidth={2}
+                strokeOpacity={0.4}
+                strokeDasharray="6 4"
+                fill="none"
+                markerEnd="url(#arrow-ghost)"
+              />
+            )}
+          </svg>
+
+          {/* Nodes */}
+          {nodes.map((node) => (
+            <FlowNode
+              key={node.id}
+              node={node}
+              panX={panX}
+              panY={panY}
+              isSelected={selectedId === node.id}
+              isConnecting={connectingFrom !== null}
+              onMouseDown={(e) => handleNodeMouseDown(e, node)}
+              onNodeClick={(e) => handleNodeClick(e, node.id)}
+              onConnectStart={(e) => handleConnectStart(e, node.id)}
+              onPlusClick={(e) => handlePlusClick(e, node)}
+              onDelete={() => handleDeleteNode(node.id)}
+            />
+          ))}
+
+          {/* Quick-add menu */}
+          {addMenu && (
+            <QuickAddMenu
+              x={addMenu.canvasX}
+              y={addMenu.canvasY}
+              onSelect={handleQuickAddSelect}
+              onDismiss={() => setAddMenu(null)}
+            />
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}

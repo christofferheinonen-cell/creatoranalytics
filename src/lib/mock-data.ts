@@ -136,6 +136,67 @@ export const MOCK_CONTACTS = [
   },
 ]
 
+export type MockNodeType = "trigger" | "action" | "condition" | "integration" | "goal"
+
+export interface MockBuilderNode {
+  id: string
+  type: MockNodeType
+  x: number
+  y: number
+  title: string
+  subtitle: string
+  outputs: string[]
+}
+
+export const MOCK_FUNNELS = [
+  {
+    id: "freebie-funnel",
+    name: "Freebie Funnel",
+    type: "freebie" as const,
+    status: "active" as const,
+    contacts: 1247,
+    conversions: 58,
+    conversionRate: 4.65,
+    revenue: 23200,
+    lastModified: "2024-09-01",
+    steps: 5,
+  },
+  {
+    id: "call-funnel",
+    name: "High-Ticket Call Funnel",
+    type: "call" as const,
+    status: "active" as const,
+    contacts: 924,
+    conversions: 61,
+    conversionRate: 6.6,
+    revenue: 72700,
+    lastModified: "2024-09-04",
+    steps: 7,
+  },
+]
+
+export const MOCK_FUNNEL_NODES: Record<string, MockBuilderNode[]> = {
+  "freebie-funnel": [
+    { id: "n1", type: "trigger",     x: 80,   y: 200, title: "Instagram Comment",  subtitle: 'Keyword "free" triggers DM flow',   outputs: ["n2"] },
+    { id: "n2", type: "action",      x: 400,  y: 200, title: "Send Welcome DM",    subtitle: "Greeting + freebie CTA button",      outputs: ["n3"] },
+    { id: "n3", type: "action",      x: 720,  y: 200, title: "Share Freebie Link", subtitle: "PDF guide or mini-course access",    outputs: ["n4"] },
+    { id: "n4", type: "integration", x: 1040, y: 200, title: "Add to Kit Sequence",subtitle: "7-day email nurture starts",         outputs: ["n5"] },
+    { id: "n5", type: "goal",        x: 1360, y: 200, title: "Purchase Made",      subtitle: "Stripe payment confirmed",            outputs: []     },
+  ],
+  "call-funnel": [
+    { id: "n1", type: "trigger",     x: 80,   y: 220, title: "Instagram Comment",   subtitle: 'Keyword "call" triggers DM flow',   outputs: ["n2"]        },
+    { id: "n2", type: "action",      x: 400,  y: 220, title: "Send Welcome DM",     subtitle: "Personal video welcome message",    outputs: ["n3"]        },
+    { id: "n3", type: "action",      x: 720,  y: 220, title: "Share VSL Video",     subtitle: "Value-stack video + CTA button",    outputs: ["n4"]        },
+    { id: "n4", type: "integration", x: 1040, y: 220, title: "Book Discovery Call", subtitle: "Calendly scheduling link sent",     outputs: ["n5", "n6"] },
+    { id: "n5", type: "condition",   x: 1360, y: 100, title: "Call Completed?",     subtitle: "If yes → pitch the offer",          outputs: ["n7"]        },
+    { id: "n6", type: "action",      x: 1360, y: 340, title: "Follow-up Sequence",  subtitle: "No-show re-engagement DMs",         outputs: []            },
+    { id: "n7", type: "goal",        x: 1680, y: 100, title: "Payment Collected",   subtitle: "High-ticket close via Stripe",      outputs: []            },
+  ],
+  new: [
+    { id: "n1", type: "trigger", x: 100, y: 200, title: "Choose a Trigger", subtitle: "Click + to add your first step", outputs: [] },
+  ],
+}
+
 export const MOCK_INTEGRATIONS = [
   {
     provider: "STRIPE",
