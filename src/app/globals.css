@@ -4,8 +4,22 @@
 
 @layer base {
   :root {
+    /* Surface CSS vars — referenced by inline styles so dark mode overrides apply */
+    --app-bg: linear-gradient(160deg, #e6ecf8, #dfe6f4 60%, #e9eefb);
+    --sidebar-bg: #fbfcff;
+    --sidebar-border: #edf2fb;
+    --topbar-control-bg: #f7f9fe;
+    --topbar-control-border: #edf2fb;
+    --card-bg: #ffffff;
+    --card-border: #edf2fb;
+    --text-primary: #0b0b0f;
+    --text-secondary: #4a5164;
+    --text-tertiary: #7b8497;
+    --text-quaternary: #9aa2b1;
+
+    /* shadcn CSS variable palette */
     --background: 220 50% 97%;
-    --foreground: 240 12% 5%;       /* #0b0b0f */
+    --foreground: 240 12% 5%;
 
     --card: 0 0% 100%;
     --card-foreground: 240 12% 5%;
@@ -13,26 +27,68 @@
     --popover: 0 0% 100%;
     --popover-foreground: 240 12% 5%;
 
-    --primary: 240 12% 5%;          /* #0b0b0f — dark primary buttons */
+    --primary: 240 12% 5%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 65% 96%;       /* #edf2fb */
+    --secondary: 220 65% 96%;
     --secondary-foreground: 240 12% 5%;
 
     --muted: 220 65% 96%;
-    --muted-foreground: 218 9% 54%; /* #7b8497 */
+    --muted-foreground: 218 9% 54%;
 
-    --accent: 222 100% 83%;         /* #abc4ff */
+    --accent: 222 100% 83%;
     --accent-foreground: 240 12% 5%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 60% 96%;          /* #edf2fb */
+    --border: 220 60% 96%;
     --input: 220 60% 96%;
     --ring: 240 12% 5%;
 
     --radius: 0.75rem;
+  }
+
+  .dark {
+    --app-bg: #0b0d15;
+    --sidebar-bg: #0f1117;
+    --sidebar-border: #1e2538;
+    --topbar-control-bg: #1a1f2e;
+    --topbar-control-border: #1e2538;
+    --card-bg: #161b22;
+    --card-border: #1e2538;
+    --text-primary: #f1f5f9;
+    --text-secondary: #94a3b8;
+    --text-tertiary: #64748b;
+    --text-quaternary: #475569;
+
+    --background: 222 47% 6%;
+    --foreground: 213 31% 91%;
+
+    --card: 220 16% 10%;
+    --card-foreground: 213 31% 91%;
+
+    --popover: 220 16% 10%;
+    --popover-foreground: 213 31% 91%;
+
+    --primary: 213 31% 91%;
+    --primary-foreground: 222 47% 6%;
+
+    --secondary: 222 16% 15%;
+    --secondary-foreground: 213 31% 91%;
+
+    --muted: 222 16% 15%;
+    --muted-foreground: 215 16% 60%;
+
+    --accent: 222 60% 40%;
+    --accent-foreground: 213 31% 91%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 13% 20%;
+    --input: 220 13% 20%;
+    --ring: 213 31% 91%;
   }
 }
 
@@ -43,7 +99,7 @@
 
   body {
     @apply text-foreground antialiased;
-    background: linear-gradient(160deg, #e6ecf8, #dfe6f4 60%, #e9eefb);
+    background: var(--app-bg);
     min-height: 100vh;
     font-family: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
     font-feature-settings: "rlig" 1, "calt" 1;
@@ -63,5 +119,9 @@
     border: 3px solid transparent;
     background-clip: content-box;
     border-radius: 99px;
+  }
+
+  .dark ::-webkit-scrollbar-thumb {
+    background: #1e2538;
   }
 }
