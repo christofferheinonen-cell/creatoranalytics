@@ -1,6 +1,7 @@
 "use client"
 
 import { useRef, useState, useCallback, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import Link from "next/link"
 import {
   ArrowLeft,
@@ -330,10 +331,13 @@ function QuickAddMenu({
 export function FunnelBuilder({
   initialNodes,
   funnelName: initialName,
+  funnelId: initialFunnelId = null,
 }: {
   initialNodes: MockBuilderNode[]
   funnelName: string
+  funnelId?: string | null
 }) {
+  const router = useRouter()
   const canvasRef = useRef<HTMLDivElement>(null)
   const [nodes, setNodes] = useState<MockBuilderNode[]>(initialNodes)
   const [panX, setPanX] = useState(0)
@@ -345,7 +349,8 @@ export function FunnelBuilder({
   const [mouseCanvasY, setMouseCanvasY] = useState(0)
   const [addMenu, setAddMenu] = useState<AddMenu | null>(null)
   const [funnelName, setFunnelName] = useState(initialName)
-  const [saved, setSaved] = useState(false)
+  const [funnelId, setFunnelId] = useState<string | null>(initialFunnelId)
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle")
 
   // Dismiss menu / cancel connecting on Escape
   useEffect(() => {
@@ -481,10 +486,34 @@ export function FunnelBuilder({
     ])
   }
 
-  const handleSave = () => {
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
-  }
+  const handleSave = useCallback(async () => {
+    if (saveState === "saving") return
+    setSaveState("saving")
+    try {
+      if (funnelId) {
+        await fetch(`/api/funnels/${funnelId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: funnelName, nodes }),
+        }).then((r) => { if (!r.ok) throw new Error("Save failed") })
+      } else {
+        const res = await fetch("/api/funnels", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: funnelName, nodes }),
+        })
+        if (!res.ok) throw new Error("Create failed")
+        const data = await res.json()
+        setFunnelId(data.id)
+        router.replace(`/funnels/${data.id}`)
+      }
+      setSaveState("saved")
+      setTimeout(() => setSaveState("idle"), 2000)
+    } catch {
+      setSaveState("error")
+      setTimeout(() => setSaveState("idle"), 3000)
+    }
+  }, [funnelId, funnelName, nodes, saveState, router])
 
   // ── Compute SVG connections ────────────────────────────────────────────────
 
@@ -576,15 +605,18 @@ export function FunnelBuilder({
 
           <button
             onClick={handleSave}
+            disabled={saveState === "saving"}
             className={cn(
-              "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors",
-              saved
+              "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-60",
+              saveState === "saved"
                 ? "bg-emerald-100 text-emerald-700"
+                : saveState === "error"
+                ? "bg-red-100 text-red-700"
                 : "bg-brand-indigo-500 text-white hover:bg-brand-indigo-600"
             )}
           >
             <Save className="h-3.5 w-3.5" />
-            {saved ? "Saved!" : "Save"}
+            {saveState === "saving" ? "Saving…" : saveState === "saved" ? "Saved!" : saveState === "error" ? "Error" : "Save"}
           </button>
         </div>
 
