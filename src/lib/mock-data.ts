@@ -147,6 +147,8 @@ export interface MockBuilderNode {
   title: string
   subtitle: string
   outputs: string[]
+  // Maps to FunnelEventType in the DB — null for visual-only nodes (goal markers, conditions)
+  eventType?: string | null
 }
 
 export const MOCK_FUNNELS = [
@@ -178,23 +180,23 @@ export const MOCK_FUNNELS = [
 
 export const MOCK_FUNNEL_NODES: Record<string, MockBuilderNode[]> = {
   "freebie-funnel": [
-    { id: "n1", type: "manychat", x: 80,   y: 200, title: "Instagram Comment",  subtitle: "Tracked via ManyChat",         outputs: ["n2"] },
-    { id: "n2", type: "manychat", x: 400,  y: 200, title: "DM Started",         subtitle: "Tracked via ManyChat",         outputs: ["n3"] },
-    { id: "n3", type: "manychat", x: 720,  y: 200, title: "Freebie Claimed",    subtitle: "Link opened in DM",            outputs: ["n4"] },
-    { id: "n4", type: "kit",      x: 1040, y: 200, title: "Email Subscribed",   subtitle: "Added to Kit sequence",        outputs: ["n5"] },
-    { id: "n5", type: "goal",     x: 1360, y: 200, title: "Purchase Made",      subtitle: "Payment confirmed via Stripe", outputs: []     },
+    { id: "n1", type: "manychat", x: 80,   y: 200, title: "Instagram Comment", subtitle: "Tracked via ManyChat",         outputs: ["n2"], eventType: "COMMENT"         },
+    { id: "n2", type: "manychat", x: 400,  y: 200, title: "DM Started",        subtitle: "Tracked via ManyChat",         outputs: ["n3"], eventType: "DM_STARTED"      },
+    { id: "n3", type: "manychat", x: 720,  y: 200, title: "Freebie Claimed",   subtitle: "Link opened in DM",            outputs: ["n4"], eventType: "FREEBIE_CLAIMED" },
+    { id: "n4", type: "kit",      x: 1040, y: 200, title: "Email Subscribed",  subtitle: "Added to Kit sequence",        outputs: ["n5"], eventType: "SUBSCRIBED"      },
+    { id: "n5", type: "goal",     x: 1360, y: 200, title: "Purchase Made",     subtitle: "Payment confirmed via Stripe", outputs: [],     eventType: "PURCHASED"       },
   ],
   "call-funnel": [
-    { id: "n1", type: "manychat",  x: 80,   y: 220, title: "Instagram Comment", subtitle: "Tracked via ManyChat",          outputs: ["n2"]        },
-    { id: "n2", type: "manychat",  x: 400,  y: 220, title: "DM Started",        subtitle: "Tracked via ManyChat",          outputs: ["n3"]        },
-    { id: "n3", type: "manychat",  x: 720,  y: 220, title: "Link Clicked",      subtitle: "VSL video view tracked",        outputs: ["n4"]        },
-    { id: "n4", type: "calendly",  x: 1040, y: 220, title: "Call Scheduled",    subtitle: "Booking via Calendly",          outputs: ["n5", "n6"] },
-    { id: "n5", type: "calendly",  x: 1360, y: 100, title: "Call Completed",    subtitle: "Attendance tracked via Calendly",outputs: ["n7"]       },
-    { id: "n6", type: "condition", x: 1360, y: 340, title: "No-Show",           subtitle: "Missed appointment",            outputs: []            },
-    { id: "n7", type: "goal",      x: 1680, y: 100, title: "Purchase Made",     subtitle: "Payment confirmed via Stripe",  outputs: []            },
+    { id: "n1", type: "manychat",  x: 80,   y: 220, title: "Instagram Comment", subtitle: "Tracked via ManyChat",           outputs: ["n2"],        eventType: "COMMENT"        },
+    { id: "n2", type: "manychat",  x: 400,  y: 220, title: "DM Started",        subtitle: "Tracked via ManyChat",           outputs: ["n3"],        eventType: "DM_STARTED"     },
+    { id: "n3", type: "manychat",  x: 720,  y: 220, title: "Link Clicked",      subtitle: "VSL video view tracked",         outputs: ["n4"],        eventType: "LINK_CLICKED"   },
+    { id: "n4", type: "calendly",  x: 1040, y: 220, title: "Call Scheduled",    subtitle: "Booking via Calendly",           outputs: ["n5", "n6"], eventType: "CALL_SCHEDULED" },
+    { id: "n5", type: "calendly",  x: 1360, y: 100, title: "Call Completed",    subtitle: "Attendance tracked via Calendly",outputs: ["n7"],        eventType: "CALL_COMPLETED" },
+    { id: "n6", type: "condition", x: 1360, y: 340, title: "No-Show",           subtitle: "Missed appointment",             outputs: [],            eventType: "CALL_NO_SHOW"   },
+    { id: "n7", type: "goal",      x: 1680, y: 100, title: "Purchase Made",     subtitle: "Payment confirmed via Stripe",   outputs: [],            eventType: "PURCHASED"      },
   ],
   new: [
-    { id: "n1", type: "manychat", x: 100, y: 200, title: "Instagram Comment", subtitle: "Choose your entry point", outputs: [] },
+    { id: "n1", type: "manychat", x: 100, y: 200, title: "Instagram Comment", subtitle: "Choose your entry point", outputs: [], eventType: "COMMENT" },
   ],
 }
 

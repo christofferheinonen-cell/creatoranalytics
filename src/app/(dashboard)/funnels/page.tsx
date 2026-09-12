@@ -4,7 +4,8 @@ import { Plus, ArrowRight, Zap, GitBranch, Clock } from "lucide-react"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
 import { FunnelChart } from "@/components/dashboard/FunnelChart"
-import type { FunnelStage } from "@/types"
+import type { FunnelDef } from "@/components/dashboard/FunnelChart"
+import { extractFunnelStages, getFunnelStageCounts } from "@/lib/funnel-analytics"
 import type { MockBuilderNode } from "@/lib/mock-data"
 
 export const metadata: Metadata = { title: "Funnels" }
@@ -19,51 +20,23 @@ export default async function FunnelsPage() {
   const session = await auth()
   const userId = session!.user.id
 
-  const [funnelCounts, userFunnels] = await Promise.all([
-    prisma.funnelEvent.groupBy({
-      by: ["type", "source"],
-      where: { userId },
-      _count: { id: true },
-    }),
-    prisma.funnel.findMany({
-      where: { userId },
-      orderBy: { updatedAt: "desc" },
-    }),
-  ])
+  const userFunnels = await prisma.funnel.findMany({
+    where: { userId },
+    orderBy: { updatedAt: "desc" },
+  })
 
-  const countByType = new Map(funnelCounts.map((r) => [r.type as string, r._count.id]))
-  const sourceByType = new Map(funnelCounts.map((r) => [r.type as string, r.source.toLowerCase()]))
-
-  function makeStage(type: string, label: string): FunnelStage | null {
-    const count = countByType.get(type)
-    if (!count) return null
-    return { stage: type, label, count, source: sourceByType.get(type) ?? "" }
-  }
-
-  const freebbieFunnel = [
-    makeStage("COMMENT", "Social Comment"),
-    makeStage("DM_STARTED", "DM Started"),
-    makeStage("FREEBIE_CLAIMED", "Freebie Claimed"),
-    makeStage("SUBSCRIBED", "Email Subscribed"),
-    makeStage("PURCHASED", "Purchased"),
-  ].filter(Boolean) as FunnelStage[]
-
-  const callFunnel = [
-    makeStage("COMMENT", "Social Comment"),
-    makeStage("DM_STARTED", "DM Started"),
-    makeStage("LINK_CLICKED", "Video Viewed"),
-    makeStage("CALL_SCHEDULED", "Call Booked"),
-    makeStage("CALL_COMPLETED", "Call Completed"),
-    makeStage("PURCHASED", "Purchased"),
-  ].filter(Boolean) as FunnelStage[]
-
-  const combinedFunnel = [
-    makeStage("COMMENT", "Social Comment"),
-    makeStage("DM_STARTED", "DM Started"),
-    makeStage("SUBSCRIBED", "Email Subscribed"),
-    makeStage("CALL_SCHEDULED", "Call Booked"),
-    makeStage("PURCHASED", "Purchased"),
-  ].filter(Boolean) as FunnelStage[]
+  const funnelDefs: FunnelDef[] = await Promise.all(
+    userFunnels.map(async (funnel) => {
+      const nodes = Array.isArray(funnel.nodes) ? (funnel.nodes as unknown as MockBuilderNode[]) : []
+      const stages = extractFunnelStages(nodes)
+      const counted = stages.length > 0 ? await getFunnelStageCounts(userId, stages) : []
+      return {
+        id: funnel.id,
+        name: funnel.name,
+        stages: counted.map((s) => ({ stage: s.eventType, label: s.label, count: s.count, source: s.source })),
+      }
+    })
+  )
 
   return (
     <div className="flex flex-col gap-8" style={{ padding: "28px 28px" }}>
@@ -233,11 +206,7 @@ export default async function FunnelsPage() {
         >
           CONVERSION ANALYTICS
         </p>
-        <FunnelChart
-          freebbieFunnel={freebbieFunnel}
-          callFunnel={callFunnel}
-          combinedFunnel={combinedFunnel}
-        />
+        <FunnelChart funnels={funnelDefs} />
       </div>
     </div>
   )

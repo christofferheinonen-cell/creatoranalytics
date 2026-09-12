@@ -54,45 +54,46 @@ interface PaletteItem {
   title: string
   subtitle: string
   Icon: React.ElementType
+  eventType: string | null
 }
 
 const PALETTE: { category: string; items: PaletteItem[] }[] = [
   {
     category: "ManyChat",
     items: [
-      { type: "manychat", title: "Instagram Comment", subtitle: "Keyword-triggered comment", Icon: MessageSquare },
-      { type: "manychat", title: "DM Started",        subtitle: "Contact opened a DM",       Icon: MessageCircle },
-      { type: "manychat", title: "Freebie Claimed",   subtitle: "Link opened in DM",         Icon: Gift },
-      { type: "manychat", title: "Link Clicked",      subtitle: "Video or URL clicked",      Icon: MousePointerClick },
+      { type: "manychat", title: "Instagram Comment", subtitle: "Keyword-triggered comment", Icon: MessageSquare,     eventType: "COMMENT"         },
+      { type: "manychat", title: "DM Started",        subtitle: "Contact opened a DM",       Icon: MessageCircle,     eventType: "DM_STARTED"      },
+      { type: "manychat", title: "Freebie Claimed",   subtitle: "Link opened in DM",         Icon: Gift,              eventType: "FREEBIE_CLAIMED" },
+      { type: "manychat", title: "Link Clicked",      subtitle: "Video or URL clicked",      Icon: MousePointerClick, eventType: "LINK_CLICKED"    },
     ],
   },
   {
     category: "Kit",
     items: [
-      { type: "kit", title: "Email Subscribed",   subtitle: "Added to a Kit sequence",  Icon: UserCheck },
-      { type: "kit", title: "Email Unsubscribed", subtitle: "Removed from Kit list",    Icon: UserMinus },
+      { type: "kit", title: "Email Subscribed",   subtitle: "Added to a Kit sequence", Icon: UserCheck, eventType: "SUBSCRIBED"   },
+      { type: "kit", title: "Email Unsubscribed", subtitle: "Removed from Kit list",   Icon: UserMinus, eventType: "UNSUBSCRIBED" },
     ],
   },
   {
     category: "Calendly",
     items: [
-      { type: "calendly", title: "Call Scheduled",  subtitle: "Booking confirmed",          Icon: Calendar },
-      { type: "calendly", title: "Call Completed",  subtitle: "Appointment attended",       Icon: Phone },
-      { type: "calendly", title: "No-Show",         subtitle: "Contact missed the call",    Icon: PhoneMissed },
+      { type: "calendly", title: "Call Scheduled", subtitle: "Booking confirmed",         Icon: Calendar,    eventType: "CALL_SCHEDULED" },
+      { type: "calendly", title: "Call Completed", subtitle: "Appointment attended",      Icon: Phone,       eventType: "CALL_COMPLETED" },
+      { type: "calendly", title: "No-Show",        subtitle: "Contact missed the call",   Icon: PhoneMissed, eventType: "CALL_NO_SHOW"   },
     ],
   },
   {
     category: "Stripe",
     items: [
-      { type: "stripe", title: "Purchase Made", subtitle: "Payment confirmed",         Icon: CreditCard },
-      { type: "stripe", title: "Refund Issued", subtitle: "Charge reversed",           Icon: RotateCcw },
+      { type: "stripe", title: "Purchase Made", subtitle: "Payment confirmed", Icon: CreditCard, eventType: "PURCHASED" },
+      { type: "stripe", title: "Refund Issued", subtitle: "Charge reversed",   Icon: RotateCcw,  eventType: "REFUNDED"  },
     ],
   },
   {
     category: "Analytics",
     items: [
-      { type: "goal",      title: "Conversion Goal", subtitle: "Mark this as your goal",   Icon: DollarSign },
-      { type: "condition", title: "Filter / Segment", subtitle: "Split tracking by condition", Icon: GitBranch },
+      { type: "goal",      title: "Conversion Goal",  subtitle: "Mark this as your goal",       Icon: DollarSign, eventType: null },
+      { type: "condition", title: "Filter / Segment", subtitle: "Split tracking by condition",  Icon: GitBranch,  eventType: null },
     ],
   },
 ]
@@ -102,35 +103,35 @@ const QUICK_ADD: { group: string; items: PaletteItem[] }[] = [
   {
     group: "ManyChat events",
     items: [
-      { type: "manychat", title: "DM Started",      subtitle: "Contact opened a DM",  Icon: MessageCircle },
-      { type: "manychat", title: "Freebie Claimed",  subtitle: "Link opened in DM",    Icon: Gift },
-      { type: "manychat", title: "Link Clicked",     subtitle: "Video or URL clicked", Icon: MousePointerClick },
+      { type: "manychat", title: "DM Started",     subtitle: "Contact opened a DM",  Icon: MessageCircle,     eventType: "DM_STARTED"      },
+      { type: "manychat", title: "Freebie Claimed", subtitle: "Link opened in DM",    Icon: Gift,              eventType: "FREEBIE_CLAIMED" },
+      { type: "manychat", title: "Link Clicked",    subtitle: "Video or URL clicked", Icon: MousePointerClick, eventType: "LINK_CLICKED"    },
     ],
   },
   {
     group: "Kit events",
     items: [
-      { type: "kit", title: "Email Subscribed", subtitle: "Added to Kit sequence", Icon: UserCheck },
+      { type: "kit", title: "Email Subscribed", subtitle: "Added to Kit sequence", Icon: UserCheck, eventType: "SUBSCRIBED" },
     ],
   },
   {
     group: "Calendly events",
     items: [
-      { type: "calendly", title: "Call Scheduled", subtitle: "Booking confirmed",    Icon: Calendar },
-      { type: "calendly", title: "Call Completed", subtitle: "Appointment attended", Icon: Phone },
+      { type: "calendly", title: "Call Scheduled", subtitle: "Booking confirmed",    Icon: Calendar, eventType: "CALL_SCHEDULED" },
+      { type: "calendly", title: "Call Completed", subtitle: "Appointment attended", Icon: Phone,    eventType: "CALL_COMPLETED" },
     ],
   },
   {
     group: "Stripe events",
     items: [
-      { type: "stripe", title: "Purchase Made", subtitle: "Payment confirmed", Icon: CreditCard },
+      { type: "stripe", title: "Purchase Made", subtitle: "Payment confirmed", Icon: CreditCard, eventType: "PURCHASED" },
     ],
   },
   {
     group: "Analytics",
     items: [
-      { type: "goal",      title: "Conversion Goal",   subtitle: "Mark as goal",             Icon: DollarSign },
-      { type: "condition", title: "Filter / Segment",  subtitle: "Split by condition",       Icon: GitBranch },
+      { type: "goal",      title: "Conversion Goal",  subtitle: "Mark as goal",        Icon: DollarSign, eventType: null },
+      { type: "condition", title: "Filter / Segment", subtitle: "Split by condition",  Icon: GitBranch,  eventType: null },
     ],
   },
 ]
@@ -365,6 +366,9 @@ export function FunnelBuilder({
   const [funnelName, setFunnelName] = useState(initialName)
   const [funnelId, setFunnelId] = useState<string | null>(initialFunnelId)
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle")
+  const [view, setView] = useState<"build" | "analytics">("build")
+  const [analyticsData, setAnalyticsData] = useState<{ eventType: string; label: string; source: string; count: number }[] | null>(null)
+  const [analyticsLoading, setAnalyticsLoading] = useState(false)
 
   // Dismiss menu / cancel connecting on Escape
   useEffect(() => {
@@ -480,6 +484,7 @@ export function FunnelBuilder({
       title: item.title,
       subtitle: item.subtitle,
       outputs: [],
+      eventType: item.eventType,
     }
     setNodes((prev) => [
       ...prev.map((n) =>
@@ -496,7 +501,7 @@ export function FunnelBuilder({
     const cy = canvas ? canvas.clientHeight / 2 - panY - NODE_H / 2 : 200
     setNodes((prev) => [
       ...prev,
-      { id: `node-${Date.now()}`, type: item.type, x: cx, y: cy, title: item.title, subtitle: item.subtitle, outputs: [] },
+      { id: `node-${Date.now()}`, type: item.type, x: cx, y: cy, title: item.title, subtitle: item.subtitle, outputs: [], eventType: item.eventType },
     ])
   }
 
@@ -528,6 +533,55 @@ export function FunnelBuilder({
       setTimeout(() => setSaveState("idle"), 3000)
     }
   }, [funnelId, funnelName, nodes, saveState, router])
+
+  const fetchAnalytics = useCallback(async (currentNodes: MockBuilderNode[]) => {
+    // Extract stages from node graph — same logic as server-side extractFunnelStages
+    const hasIncoming = new Set(currentNodes.flatMap((n) => n.outputs))
+    const roots = currentNodes.filter((n) => !hasIncoming.has(n.id))
+    const startNodes = roots.length > 0 ? roots : currentNodes.slice(0, 1)
+
+    const visited = new Set<string>()
+    const stages: { eventType: string; label: string; source: string }[] = []
+
+    function walk(nodeId: string) {
+      if (visited.has(nodeId)) return
+      visited.add(nodeId)
+      const node = currentNodes.find((n) => n.id === nodeId)
+      if (!node) return
+      if (node.eventType) stages.push({ eventType: node.eventType, label: node.title, source: node.type })
+      for (const outId of node.outputs) walk(outId)
+    }
+    for (const root of startNodes) walk(root.id)
+
+    if (!stages.length) {
+      setAnalyticsData([])
+      return
+    }
+
+    setAnalyticsLoading(true)
+    try {
+      const res = await fetch("/api/funnels/analytics", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ stages }),
+      })
+      if (!res.ok) throw new Error("Failed to load analytics")
+      const data = await res.json()
+      setAnalyticsData(data.stages)
+    } catch {
+      setAnalyticsData(null)
+    } finally {
+      setAnalyticsLoading(false)
+    }
+  }, [])
+
+  // Fetch analytics whenever the user switches to the analytics view
+  useEffect(() => {
+    if (view === "analytics") {
+      fetchAnalytics(nodes)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view])
 
   // ── Compute SVG connections ────────────────────────────────────────────────
 
@@ -607,35 +661,144 @@ export function FunnelBuilder({
             placeholder="Untitled Funnel"
           />
 
-          <span className="text-[11px] text-muted-foreground">
-            {nodes.length} {nodes.length === 1 ? "step" : "steps"}
-          </span>
+          {/* Build / Analytics toggle */}
+          <div className="flex rounded-lg border border-border overflow-hidden text-[11px] font-semibold shrink-0">
+            <button
+              onClick={() => setView("build")}
+              className={cn(
+                "px-3 py-1 transition-colors",
+                view === "build" ? "bg-brand-navy text-white" : "text-muted-foreground hover:bg-surface-subtle"
+              )}
+            >
+              Build
+            </button>
+            <button
+              onClick={() => setView("analytics")}
+              className={cn(
+                "px-3 py-1 border-l border-border transition-colors",
+                view === "analytics" ? "bg-brand-navy text-white" : "text-muted-foreground hover:bg-surface-subtle"
+              )}
+            >
+              Analytics
+            </button>
+          </div>
 
-          {connectingFrom && (
+          {view === "build" && connectingFrom && (
             <span className="rounded-full bg-brand-indigo-50 px-2.5 py-1 text-[10px] font-semibold text-brand-indigo-600">
               Click a node to connect · Esc to cancel
             </span>
           )}
 
-          <button
-            onClick={handleSave}
-            disabled={saveState === "saving"}
-            className={cn(
-              "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-60",
-              saveState === "saved"
-                ? "bg-emerald-100 text-emerald-700"
-                : saveState === "error"
-                ? "bg-red-100 text-red-700"
-                : "bg-brand-indigo-500 text-white hover:bg-brand-indigo-600"
-            )}
-          >
-            <Save className="h-3.5 w-3.5" />
-            {saveState === "saving" ? "Saving…" : saveState === "saved" ? "Saved!" : saveState === "error" ? "Error" : "Save"}
-          </button>
+          {view === "build" && (
+            <button
+              onClick={handleSave}
+              disabled={saveState === "saving"}
+              className={cn(
+                "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-60 shrink-0",
+                saveState === "saved"
+                  ? "bg-emerald-100 text-emerald-700"
+                  : saveState === "error"
+                  ? "bg-red-100 text-red-700"
+                  : "bg-brand-indigo-500 text-white hover:bg-brand-indigo-600"
+              )}
+            >
+              <Save className="h-3.5 w-3.5" />
+              {saveState === "saving" ? "Saving…" : saveState === "saved" ? "Saved!" : saveState === "error" ? "Error" : "Save"}
+            </button>
+          )}
         </div>
 
+        {/* Analytics panel */}
+        {view === "analytics" && (
+          <div className="flex-1 overflow-y-auto p-8">
+            {analyticsLoading && (
+              <div className="flex items-center justify-center h-48 text-sm text-muted-foreground">
+                Loading analytics…
+              </div>
+            )}
+            {!analyticsLoading && analyticsData !== null && analyticsData.length === 0 && (
+              <div className="flex flex-col items-center justify-center h-48 gap-2 text-center">
+                <p className="text-sm font-medium text-brand-navy">No trackable stages in this funnel</p>
+                <p className="text-xs text-muted-foreground">Add ManyChat, Kit, Calendly or Stripe events to see analytics.</p>
+              </div>
+            )}
+            {!analyticsLoading && analyticsData && analyticsData.length > 0 && (
+              <div className="max-w-2xl mx-auto">
+                <div className="mb-6">
+                  <h2 className="text-base font-bold text-brand-navy">{funnelName}</h2>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Distinct contacts who reached each stage · all time
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-border bg-surface-card overflow-hidden">
+                  {analyticsData.map((stage, i) => {
+                    const top = analyticsData[0]?.count ?? 0
+                    const pct = top > 0 ? Math.round((stage.count / top) * 100) : 0
+                    const prevCount = i > 0 ? analyticsData[i - 1].count : stage.count
+                    const dropPct = prevCount > 0 ? Math.round(((prevCount - stage.count) / prevCount) * 100) : 0
+                    const SOURCE_COLOR: Record<string, string> = {
+                      manychat: "#2563EB", kit: "#059669", calendly: "#D97706",
+                      stripe: "#7C3AED", goal: "#DB2777", condition: "#B45309",
+                    }
+                    const color = SOURCE_COLOR[stage.source] ?? "#6366F1"
+
+                    return (
+                      <div
+                        key={stage.eventType}
+                        className="flex items-center gap-4 px-5 py-4"
+                        style={{ borderTop: i > 0 ? "1px solid var(--card-border)" : "none" }}
+                      >
+                        <span className="text-[11px] font-bold text-muted-foreground w-5 shrink-0">
+                          {String(i + 1).padStart(2, "0")}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1.5">
+                            <span className="text-sm font-semibold text-brand-navy">{stage.label}</span>
+                            <span
+                              className="text-[10px] font-bold uppercase tracking-wide rounded-full px-2 py-0.5"
+                              style={{ background: color + "18", color }}
+                            >
+                              {stage.source}
+                            </span>
+                          </div>
+                          <div className="h-2 rounded-full overflow-hidden bg-gray-100">
+                            <div
+                              className="h-full rounded-full transition-all duration-700"
+                              style={{ width: `${Math.max(pct, 2)}%`, background: color }}
+                            />
+                          </div>
+                        </div>
+                        <div className="text-right shrink-0 w-24">
+                          <span className="text-base font-bold text-brand-navy">{stage.count.toLocaleString()}</span>
+                          <div className="text-[11px] text-muted-foreground">
+                            {pct}% of top
+                            {i > 0 && dropPct > 0 && (
+                              <span className="ml-1 text-red-500">↓{dropPct}%</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+                <button
+                  onClick={() => fetchAnalytics(nodes)}
+                  className="mt-4 text-xs text-muted-foreground hover:text-brand-navy transition-colors"
+                >
+                  ↻ Refresh
+                </button>
+              </div>
+            )}
+            {!analyticsLoading && analyticsData === null && (
+              <div className="flex items-center justify-center h-48 text-sm text-red-500">
+                Failed to load analytics. Check your connection.
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Canvas */}
-        <div
+        {view === "build" && <div
           ref={canvasRef}
           className="relative flex-1 overflow-hidden"
           style={{ cursor: drag?.kind === "canvas" ? "grabbing" : connectingFrom ? "crosshair" : "default" }}
@@ -735,7 +898,7 @@ export function FunnelBuilder({
               onDismiss={() => setAddMenu(null)}
             />
           )}
-        </div>
+        </div>}
       </div>
     </div>
   )

@@ -4,12 +4,15 @@ import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
 import { HeroCard } from "@/components/dashboard/HeroCard"
 import { FunnelChart } from "@/components/dashboard/FunnelChart"
+import type { FunnelDef } from "@/components/dashboard/FunnelChart"
+import { extractFunnelStages, getFunnelStageCounts } from "@/lib/funnel-analytics"
 import { RevenueChart } from "@/components/dashboard/RevenueChart"
 import { ConnectedSources } from "@/components/dashboard/ConnectedSources"
 import { RevenuePill } from "@/components/dashboard/RevenuePill"
 import { SetupProgress } from "@/components/dashboard/SetupProgress"
 import { pctChange, formatNumber } from "@/lib/utils"
-import type { ConnectedAccountSummary, FunnelStage, Provider } from "@/types"
+import type { ConnectedAccountSummary, Provider } from "@/types"
+import type { MockBuilderNode } from "@/lib/mock-data"
 
 export const metadata: Metadata = { title: "Dashboard" }
 
@@ -57,6 +60,7 @@ export default async function DashboardPage() {
     kitContactCount,
     manychatContactCount,
     calendlyContactCount,
+    userFunnels,
   ] = await Promise.all([
     prisma.funnelEvent.aggregate({
       where: { userId, type: "PURCHASED", timestamp: { gte: thirtyDaysAgo } },
@@ -93,6 +97,7 @@ export default async function DashboardPage() {
     prisma.contact.count({ where: { userId, kitSubscriberId: { not: null } } }),
     prisma.contact.count({ where: { userId, manychatUserId: { not: null } } }),
     prisma.contact.count({ where: { userId, calendlyInviteeId: { not: null } } }),
+    prisma.funnel.findMany({ where: { userId }, orderBy: { updatedAt: "desc" } }),
   ])
 
   const totalRevenue = currentRevenue._sum.value?.toNumber() ?? 0
@@ -101,39 +106,18 @@ export default async function DashboardPage() {
 
   const revenueChartData = groupByWeek(revenueEvents)
 
-  const countByType = new Map<string, number>(funnelCounts.map((r) => [r.type as string, r._count.id]))
-  const sourceByType = new Map<string, string>(funnelCounts.map((r) => [r.type as string, r.source.toLowerCase()]))
-
-  function makeStage(type: string, label: string): FunnelStage | null {
-    const count = countByType.get(type)
-    if (!count) return null
-    return { stage: type, label, count, source: sourceByType.get(type) ?? "" }
-  }
-
-  const freebbieFunnel = [
-    makeStage("COMMENT", "Social Comment"),
-    makeStage("DM_STARTED", "DM Started"),
-    makeStage("FREEBIE_CLAIMED", "Freebie Claimed"),
-    makeStage("SUBSCRIBED", "Email Subscribed"),
-    makeStage("PURCHASED", "Purchased"),
-  ].filter(Boolean) as FunnelStage[]
-
-  const callFunnel = [
-    makeStage("COMMENT", "Social Comment"),
-    makeStage("DM_STARTED", "DM Started"),
-    makeStage("LINK_CLICKED", "Video Viewed"),
-    makeStage("CALL_SCHEDULED", "Call Booked"),
-    makeStage("CALL_COMPLETED", "Call Completed"),
-    makeStage("PURCHASED", "Purchased"),
-  ].filter(Boolean) as FunnelStage[]
-
-  const combinedFunnel = [
-    makeStage("COMMENT", "Social Comment"),
-    makeStage("DM_STARTED", "DM Started"),
-    makeStage("SUBSCRIBED", "Email Subscribed"),
-    makeStage("CALL_SCHEDULED", "Call Booked"),
-    makeStage("PURCHASED", "Purchased"),
-  ].filter(Boolean) as FunnelStage[]
+  const funnelDefs: FunnelDef[] = await Promise.all(
+    userFunnels.map(async (funnel) => {
+      const nodes = Array.isArray(funnel.nodes) ? (funnel.nodes as unknown as MockBuilderNode[]) : []
+      const stages = extractFunnelStages(nodes)
+      const counted = stages.length > 0 ? await getFunnelStageCounts(userId, stages) : []
+      return {
+        id: funnel.id,
+        name: funnel.name,
+        stages: counted.map((s) => ({ stage: s.eventType, label: s.label, count: s.count, source: s.source })),
+      }
+    })
+  )
 
   // Build integration list
   const integrations: ConnectedAccountSummary[] = connectedAccounts.map((a) => ({
@@ -249,11 +233,7 @@ export default async function DashboardPage() {
         </div>
 
         {/* Funnel performance */}
-        <FunnelChart
-          freebbieFunnel={freebbieFunnel}
-          callFunnel={callFunnel}
-          combinedFunnel={combinedFunnel}
-        />
+        <FunnelChart funnels={funnelDefs} />
 
         {/* Revenue chart */}
         <RevenueChart data={revenueChartData} stripeConnected={stripeConnected} />

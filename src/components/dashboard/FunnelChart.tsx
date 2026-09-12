@@ -2,14 +2,21 @@
 
 import Link from "next/link"
 import { useState } from "react"
-import { Info } from "lucide-react"
 import type { FunnelStage } from "@/types"
+
+export interface FunnelDef {
+  id: string
+  name: string
+  stages: FunnelStage[]
+}
 
 function FunnelBar({ stages }: { stages: FunnelStage[] }) {
   if (stages.length === 0) {
     return (
       <div className="py-8 text-center">
-        <p className="text-[13.5px] text-cr-text-3">No funnel data yet. Connect an integration to see your funnel.</p>
+        <p className="text-[13.5px] text-cr-text-3">
+          No data for this funnel yet. Connect integrations and make sure your funnel is saving events.
+        </p>
       </div>
     )
   }
@@ -20,6 +27,8 @@ function FunnelBar({ stages }: { stages: FunnelStage[] }) {
     <div className="flex flex-col">
       {stages.map((stage, i) => {
         const pct = top > 0 ? (stage.count / top) * 100 : 0
+        const prevCount = i > 0 ? stages[i - 1].count : stage.count
+        const dropPct = prevCount > 0 ? Math.round(((prevCount - stage.count) / prevCount) * 100) : 0
         const isEmpty = stage.count === 0
 
         return (
@@ -27,7 +36,7 @@ function FunnelBar({ stages }: { stages: FunnelStage[] }) {
             key={stage.stage}
             className="grid items-center gap-[14px]"
             style={{
-              gridTemplateColumns: "minmax(110px, 1fr) minmax(70px, 2.2fr) 76px",
+              gridTemplateColumns: "minmax(110px, 1fr) minmax(70px, 2.2fr) 90px",
               padding: "14px 0",
               borderTop: "1px solid #f2f5fb",
             }}
@@ -40,10 +49,7 @@ function FunnelBar({ stages }: { stages: FunnelStage[] }) {
                 {stage.label}
               </span>
             </div>
-            <div
-              className="h-[30px] rounded-full overflow-hidden"
-              style={{ background: "#f5f8fe" }}
-            >
+            <div className="h-[30px] rounded-full overflow-hidden" style={{ background: "#f5f8fe" }}>
               <div
                 className="h-full rounded-full transition-all duration-500"
                 style={{
@@ -52,24 +58,15 @@ function FunnelBar({ stages }: { stages: FunnelStage[] }) {
                 }}
               />
             </div>
-            <div className="flex items-center justify-end gap-2">
-              <span
-                className={
-                  isEmpty
-                    ? "text-[15px] font-bold text-cr-text-4"
-                    : "text-[15px] font-bold text-cr-black"
-                }
-              >
-                {stage.count}
+            <div className="flex flex-col items-end">
+              <span className={isEmpty ? "text-[15px] font-bold text-cr-text-4" : "text-[15px] font-bold text-cr-black"}>
+                {stage.count.toLocaleString()}
               </span>
-              <span
-                className="text-[12px] font-semibold rounded-full px-2 py-[3px]"
-                style={{
-                  background: isEmpty ? "#f5f6f8" : "#e2eafc",
-                  color: isEmpty ? "#7b8497" : "#0b0b0f",
-                }}
-              >
+              <span className="text-[11px] text-muted-foreground">
                 {Math.round(pct)}%
+                {i > 0 && !isEmpty && dropPct > 0 && (
+                  <span className="ml-1 text-red-400">↓{dropPct}%</span>
+                )}
               </span>
             </div>
           </div>
@@ -79,25 +76,34 @@ function FunnelBar({ stages }: { stages: FunnelStage[] }) {
   )
 }
 
-type TabKey = "all" | "freebie" | "call"
-
 interface FunnelChartProps {
-  freebbieFunnel: FunnelStage[]
-  callFunnel: FunnelStage[]
-  combinedFunnel: FunnelStage[]
+  funnels: FunnelDef[]
 }
 
-export function FunnelChart({ freebbieFunnel, callFunnel, combinedFunnel }: FunnelChartProps) {
-  const [tab, setTab] = useState<TabKey>("all")
-  const stageCount = combinedFunnel.length
+export function FunnelChart({ funnels }: FunnelChartProps) {
+  const [activeId, setActiveId] = useState<string>(funnels[0]?.id ?? "")
 
-  const stages: Record<TabKey, FunnelStage[]> = {
-    all: combinedFunnel,
-    freebie: freebbieFunnel,
-    call: callFunnel,
+  if (funnels.length === 0) {
+    return (
+      <section style={{ border: "1px solid #edf2fb", borderRadius: "26px" }}>
+        <div className="flex flex-col items-center justify-center gap-3 py-12 text-center px-8">
+          <p className="text-[15px] font-semibold text-cr-black">No funnels built yet</p>
+          <p className="text-[13.5px] text-cr-text-3 max-w-xs">
+            Build a funnel to start tracking conversion rates across your integrations.
+          </p>
+          <Link
+            href="/funnels/new"
+            className="text-[13px] font-semibold text-white rounded-full px-[15px] py-2 hover:opacity-90 transition-opacity"
+            style={{ background: "#0b0b0f" }}
+          >
+            Build your first funnel
+          </Link>
+        </div>
+      </section>
+    )
   }
 
-  const hasCalendly = callFunnel.some((s) => s.stage === "CALL_SCHEDULED" && s.count > 0)
+  const activeFunnel = funnels.find((f) => f.id === activeId) ?? funnels[0]
 
   return (
     <section style={{ border: "1px solid #edf2fb", borderRadius: "26px" }}>
@@ -115,60 +121,42 @@ export function FunnelChart({ freebbieFunnel, callFunnel, combinedFunnel }: Funn
               className="text-[11.5px] font-semibold text-cr-text-2 rounded-full px-[9px] py-[3px]"
               style={{ background: "#edf2fb" }}
             >
-              {stageCount} stages
+              {activeFunnel.stages.length} stages
             </span>
           </div>
           <p className="text-[13.5px] text-cr-text-3 mt-[5px] mb-0">
-            Top of funnel to revenue, last 30 days.
+            Distinct contacts per stage · all time
           </p>
         </div>
 
-        {/* Tab switcher */}
-        <div
-          className="flex overflow-hidden"
-          style={{ border: "1px solid #edf2fb", borderRadius: "99px" }}
-        >
-          {(["all", "freebie", "call"] as TabKey[]).map((t, i) => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              className="border-none font-[inherit] text-[12.5px] font-semibold px-[15px] py-2 cursor-pointer transition-colors capitalize"
-              style={{
-                background: tab === t ? "#0b0b0f" : "#fff",
-                color: tab === t ? "#fff" : "#4a5164",
-                borderLeft: i > 0 ? "1px solid #edf2fb" : "none",
-              }}
-            >
-              {t === "all" ? "All" : t === "freebie" ? "Freebie" : "Call"}
-            </button>
-          ))}
-        </div>
+        {/* Funnel tab switcher */}
+        {funnels.length > 1 && (
+          <div
+            className="flex overflow-hidden"
+            style={{ border: "1px solid #edf2fb", borderRadius: "99px" }}
+          >
+            {funnels.map((f, i) => (
+              <button
+                key={f.id}
+                onClick={() => setActiveId(f.id)}
+                className="border-none font-[inherit] text-[12.5px] font-semibold px-[15px] py-2 cursor-pointer transition-colors max-w-[140px] truncate"
+                style={{
+                  background: activeId === f.id ? "#0b0b0f" : "#fff",
+                  color: activeId === f.id ? "#fff" : "#4a5164",
+                  borderLeft: i > 0 ? "1px solid #edf2fb" : "none",
+                }}
+              >
+                {f.name}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Funnel bars */}
-      <div style={{ padding: "0 20px 8px" }}>
-        <FunnelBar stages={stages[tab]} />
+      <div style={{ padding: "0 20px 16px" }}>
+        <FunnelBar stages={activeFunnel.stages} />
       </div>
-
-      {/* Tip */}
-      {!hasCalendly && (
-        <div
-          className="flex items-center gap-3 flex-wrap"
-          style={{ margin: "0 20px 20px", padding: "14px 16px", background: "#f7f9fe", borderRadius: "18px" }}
-        >
-          <Info className="shrink-0 h-[18px] w-[18px] text-cr-black" strokeWidth={1.5} />
-          <span className="text-[13.5px] text-cr-text-2 flex-1 min-w-[200px]">
-            Both funnels convert to email but drop off before a call.
-          </span>
-          <Link
-            href="/integrations"
-            className="text-[13px] font-semibold text-white rounded-full px-[15px] py-2 whitespace-nowrap hover:opacity-90 transition-opacity"
-            style={{ background: "#0b0b0f" }}
-          >
-            Connect Calendly
-          </Link>
-        </div>
-      )}
     </section>
   )
 }
