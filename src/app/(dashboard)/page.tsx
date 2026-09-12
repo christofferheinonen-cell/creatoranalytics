@@ -53,7 +53,10 @@ export default async function DashboardPage() {
     revenueEvents,
     connectedAccounts,
     funnelCounts,
-    contactSources,
+    stripeContactCount,
+    kitContactCount,
+    manychatContactCount,
+    calendlyContactCount,
   ] = await Promise.all([
     prisma.funnelEvent.aggregate({
       where: { userId, type: "PURCHASED", timestamp: { gte: thirtyDaysAgo } },
@@ -86,12 +89,10 @@ export default async function DashboardPage() {
       where: { userId },
       _count: { id: true },
     }),
-    // Count contacts by source field
-    prisma.contact.groupBy({
-      by: ["source"],
-      where: { userId },
-      _count: { id: true },
-    }),
+    prisma.contact.count({ where: { userId, stripeCustomerId: { not: null } } }),
+    prisma.contact.count({ where: { userId, kitSubscriberId: { not: null } } }),
+    prisma.contact.count({ where: { userId, manychatUserId: { not: null } } }),
+    prisma.contact.count({ where: { userId, calendlyInviteeId: { not: null } } }),
   ])
 
   const totalRevenue = currentRevenue._sum.value?.toNumber() ?? 0
@@ -149,14 +150,18 @@ export default async function DashboardPage() {
   }
 
   // Source shares for top sources bar
-  const sourceShareMap = new Map(contactSources.map((r) => [r.source ?? "unknown", r._count.id]))
-  const totalFromSources = [...sourceShareMap.values()].reduce((a, b) => a + b, 0)
-  const sourceShares = (["STRIPE", "KIT", "MANYCHAT", "CALENDLY"] as Provider[])
-    .map((p) => {
-      const slug = p.toLowerCase()
-      const count = sourceShareMap.get(slug) ?? 0
-      return { provider: p, pct: totalFromSources > 0 ? Math.round((count / totalFromSources) * 100) : 0 }
-    })
+  const sourceCounts: [Provider, number][] = [
+    ["STRIPE", stripeContactCount],
+    ["KIT", kitContactCount],
+    ["MANYCHAT", manychatContactCount],
+    ["CALENDLY", calendlyContactCount],
+  ]
+  const totalFromSources = sourceCounts.reduce((a, [, n]) => a + n, 0)
+  const sourceShares = sourceCounts
+    .map(([provider, count]) => ({
+      provider,
+      pct: totalFromSources > 0 ? Math.round((count / totalFromSources) * 100) : 0,
+    }))
     .filter((s) => s.pct > 0)
 
   // Setup steps
