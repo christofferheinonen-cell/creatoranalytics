@@ -14,14 +14,8 @@ export default async function DashboardLayout({
   const firstName = session.user?.name?.split(" ")[0] ?? "there"
 
   return (
-    <div className="flex min-h-screen items-stretch p-[22px]">
-      <div
-        className="flex w-full max-w-[1640px] mx-auto bg-white overflow-hidden"
-        style={{
-          borderRadius: "30px",
-          boxShadow: "0 2px 4px rgba(11,11,15,.04), 0 30px 70px -30px rgba(11,11,15,.28)",
-        }}
-      >
+    <div className="flex min-h-screen items-stretch">
+      <div className="flex w-full max-w-[1640px] mx-auto bg-white overflow-hidden">
         <Sidebar />
         <div className="flex flex-1 flex-col bg-white min-w-0">
           <TopBar />
