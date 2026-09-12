@@ -8,8 +8,6 @@ import {
   Plus,
   X,
   MessageCircle,
-  Tag,
-  Clock,
   Mail,
   Calendar,
   CreditCard,
@@ -17,12 +15,14 @@ import {
   DollarSign,
   Phone,
   UserCheck,
-  Shuffle,
   MessageSquare,
-  Image,
-  Megaphone,
   Zap,
   Save,
+  MousePointerClick,
+  Gift,
+  UserMinus,
+  RotateCcw,
+  PhoneMissed,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { MockBuilderNode, MockNodeType } from "@/lib/mock-data"
@@ -39,11 +39,12 @@ const NODE_CFG: Record<MockNodeType, {
   dot: string
   ring: string
 }> = {
-  trigger:     { label: "Trigger",     color: "#059669", headerBg: "#ECFDF5", dot: "#10B981", ring: "#34D399" },
-  action:      { label: "Action",      color: "#2563EB", headerBg: "#EFF6FF", dot: "#3B82F6", ring: "#60A5FA" },
-  condition:   { label: "Condition",   color: "#D97706", headerBg: "#FFFBEB", dot: "#F59E0B", ring: "#FCD34D" },
-  integration: { label: "Integration", color: "#7C3AED", headerBg: "#F5F3FF", dot: "#8B5CF6", ring: "#A78BFA" },
-  goal:        { label: "Goal",        color: "#DB2777", headerBg: "#FDF2F8", dot: "#EC4899", ring: "#F472B6" },
+  manychat:  { label: "ManyChat",  color: "#2563EB", headerBg: "#EFF6FF", dot: "#3B82F6", ring: "#60A5FA" },
+  kit:       { label: "Kit",       color: "#059669", headerBg: "#ECFDF5", dot: "#10B981", ring: "#34D399" },
+  calendly:  { label: "Calendly",  color: "#D97706", headerBg: "#FFFBEB", dot: "#F59E0B", ring: "#FCD34D" },
+  stripe:    { label: "Stripe",    color: "#7C3AED", headerBg: "#F5F3FF", dot: "#8B5CF6", ring: "#A78BFA" },
+  condition: { label: "Filter",    color: "#B45309", headerBg: "#FEF3C7", dot: "#D97706", ring: "#FBBF24" },
+  goal:      { label: "Goal",      color: "#DB2777", headerBg: "#FDF2F8", dot: "#EC4899", ring: "#F472B6" },
 }
 
 // ─── Palette definition ───────────────────────────────────────────────────────
@@ -57,43 +58,41 @@ interface PaletteItem {
 
 const PALETTE: { category: string; items: PaletteItem[] }[] = [
   {
-    category: "Triggers",
+    category: "ManyChat",
     items: [
-      { type: "trigger", title: "Instagram Comment", subtitle: "Keyword triggers DM flow",  Icon: MessageSquare },
-      { type: "trigger", title: "DM Received",        subtitle: "Incoming direct message",   Icon: MessageCircle },
-      { type: "trigger", title: "Story Reply",         subtitle: "Reply on your story",       Icon: Image },
+      { type: "manychat", title: "Instagram Comment", subtitle: "Keyword-triggered comment", Icon: MessageSquare },
+      { type: "manychat", title: "DM Started",        subtitle: "Contact opened a DM",       Icon: MessageCircle },
+      { type: "manychat", title: "Freebie Claimed",   subtitle: "Link opened in DM",         Icon: Gift },
+      { type: "manychat", title: "Link Clicked",      subtitle: "Video or URL clicked",      Icon: MousePointerClick },
     ],
   },
   {
-    category: "Actions",
+    category: "Kit",
     items: [
-      { type: "action", title: "Send DM",          subtitle: "Automated message reply", Icon: MessageCircle },
-      { type: "action", title: "Add Tag",           subtitle: "Label this contact",      Icon: Tag },
-      { type: "action", title: "Wait / Delay",      subtitle: "Time-based pause",        Icon: Clock },
-      { type: "action", title: "Send Announcement", subtitle: "Broadcast to list",       Icon: Megaphone },
+      { type: "kit", title: "Email Subscribed",   subtitle: "Added to a Kit sequence",  Icon: UserCheck },
+      { type: "kit", title: "Email Unsubscribed", subtitle: "Removed from Kit list",    Icon: UserMinus },
     ],
   },
   {
-    category: "Conditions",
+    category: "Calendly",
     items: [
-      { type: "condition", title: "If / Else",  subtitle: "Branch by condition", Icon: GitBranch },
-      { type: "condition", title: "A/B Split",  subtitle: "Split-test traffic",  Icon: Shuffle },
+      { type: "calendly", title: "Call Scheduled",  subtitle: "Booking confirmed",          Icon: Calendar },
+      { type: "calendly", title: "Call Completed",  subtitle: "Appointment attended",       Icon: Phone },
+      { type: "calendly", title: "No-Show",         subtitle: "Contact missed the call",    Icon: PhoneMissed },
     ],
   },
   {
-    category: "Integrations",
+    category: "Stripe",
     items: [
-      { type: "integration", title: "Add to Kit",       subtitle: "Email nurture sequence", Icon: Mail },
-      { type: "integration", title: "Book Call",         subtitle: "Calendly scheduling",    Icon: Calendar },
-      { type: "integration", title: "Stripe Checkout",   subtitle: "Payment link",           Icon: CreditCard },
+      { type: "stripe", title: "Purchase Made", subtitle: "Payment confirmed",         Icon: CreditCard },
+      { type: "stripe", title: "Refund Issued", subtitle: "Charge reversed",           Icon: RotateCcw },
     ],
   },
   {
-    category: "Goals",
+    category: "Analytics",
     items: [
-      { type: "goal", title: "Purchase Made",    subtitle: "Stripe payment confirmed", Icon: DollarSign },
-      { type: "goal", title: "Call Booked",       subtitle: "Calendly booking done",    Icon: Phone },
-      { type: "goal", title: "Email Subscribed",  subtitle: "Kit subscriber added",     Icon: UserCheck },
+      { type: "goal",      title: "Conversion Goal", subtitle: "Mark this as your goal",   Icon: DollarSign },
+      { type: "condition", title: "Filter / Segment", subtitle: "Split tracking by condition", Icon: GitBranch },
     ],
   },
 ]
@@ -101,27 +100,37 @@ const PALETTE: { category: string; items: PaletteItem[] }[] = [
 // Quick-add menu shown when clicking "+" on a node
 const QUICK_ADD: { group: string; items: PaletteItem[] }[] = [
   {
-    group: "Continue flow",
+    group: "ManyChat events",
     items: [
-      { type: "action",      title: "Send DM",          subtitle: "Automated reply",       Icon: MessageCircle },
-      { type: "action",      title: "Wait / Delay",      subtitle: "Time-based pause",      Icon: Clock },
-      { type: "integration", title: "Add to Kit",        subtitle: "Email nurture",         Icon: Mail },
-      { type: "integration", title: "Book Call",         subtitle: "Calendly scheduling",   Icon: Calendar },
-      { type: "integration", title: "Stripe Checkout",   subtitle: "Payment link",          Icon: CreditCard },
+      { type: "manychat", title: "DM Started",      subtitle: "Contact opened a DM",  Icon: MessageCircle },
+      { type: "manychat", title: "Freebie Claimed",  subtitle: "Link opened in DM",    Icon: Gift },
+      { type: "manychat", title: "Link Clicked",     subtitle: "Video or URL clicked", Icon: MousePointerClick },
     ],
   },
   {
-    group: "Logic",
+    group: "Kit events",
     items: [
-      { type: "condition", title: "If / Else", subtitle: "Branch condition", Icon: GitBranch },
-      { type: "condition", title: "A/B Split", subtitle: "Split traffic",    Icon: Shuffle },
+      { type: "kit", title: "Email Subscribed", subtitle: "Added to Kit sequence", Icon: UserCheck },
     ],
   },
   {
-    group: "Goals",
+    group: "Calendly events",
     items: [
-      { type: "goal", title: "Purchase Made",   subtitle: "Stripe payment", Icon: DollarSign },
-      { type: "goal", title: "Call Booked",      subtitle: "Calendly booking", Icon: Phone },
+      { type: "calendly", title: "Call Scheduled", subtitle: "Booking confirmed",    Icon: Calendar },
+      { type: "calendly", title: "Call Completed", subtitle: "Appointment attended", Icon: Phone },
+    ],
+  },
+  {
+    group: "Stripe events",
+    items: [
+      { type: "stripe", title: "Purchase Made", subtitle: "Payment confirmed", Icon: CreditCard },
+    ],
+  },
+  {
+    group: "Analytics",
+    items: [
+      { type: "goal",      title: "Conversion Goal",   subtitle: "Mark as goal",             Icon: DollarSign },
+      { type: "condition", title: "Filter / Segment",  subtitle: "Split by condition",       Icon: GitBranch },
     ],
   },
 ]
@@ -210,7 +219,12 @@ function FlowNode({
             style={{ backgroundColor: cfg.color }}
             className="flex h-4 w-4 shrink-0 items-center justify-center rounded"
           >
-            <Zap className="h-2.5 w-2.5 text-white" />
+            {node.type === "manychat"  && <MessageSquare className="h-2.5 w-2.5 text-white" />}
+            {node.type === "kit"       && <Mail className="h-2.5 w-2.5 text-white" />}
+            {node.type === "calendly"  && <Calendar className="h-2.5 w-2.5 text-white" />}
+            {node.type === "stripe"    && <CreditCard className="h-2.5 w-2.5 text-white" />}
+            {node.type === "goal"      && <DollarSign className="h-2.5 w-2.5 text-white" />}
+            {node.type === "condition" && <GitBranch className="h-2.5 w-2.5 text-white" />}
           </div>
           <span
             style={{ color: cfg.color }}

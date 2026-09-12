@@ -6,7 +6,7 @@ import { FunnelBuilder } from "@/components/funnels/FunnelBuilder"
 import type { MockBuilderNode } from "@/lib/mock-data"
 
 const BLANK_CANVAS: MockBuilderNode[] = [
-  { id: "n1", type: "trigger", x: 100, y: 200, title: "Choose a Trigger", subtitle: "Click + to add your first step", outputs: [] },
+  { id: "n1", type: "manychat", x: 100, y: 200, title: "Instagram Comment", subtitle: "Drag events from the left panel to build your funnel", outputs: [] },
 ]
 
 export async function generateMetadata({
