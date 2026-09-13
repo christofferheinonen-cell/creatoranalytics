@@ -200,6 +200,42 @@ export const MOCK_FUNNEL_NODES: Record<string, MockBuilderNode[]> = {
   ],
 }
 
+export const MOCK_GA4 = {
+  sessions: 4820,
+  previousSessions: 3910,
+  users: 3241,
+  previousUsers: 2758,
+  pageViews: 12440,
+  engagementRate: 61.4,
+  sources: [
+    { source: "Organic Search", sessions: 2100, pct: 43.6 },
+    { source: "Direct", sessions: 1250, pct: 25.9 },
+    { source: "Social", sessions: 870, pct: 18.0 },
+    { source: "Referral", sessions: 600, pct: 12.4 },
+  ],
+  topPages: [
+    { path: "/", views: 4200, sessions: 2800 },
+    { path: "/offer", views: 2100, sessions: 1400 },
+    { path: "/freebie", views: 1800, sessions: 1100 },
+    { path: "/about", views: 980, sessions: 620 },
+    { path: "/contact", views: 540, sessions: 320 },
+  ],
+  weeklyData: [
+    { week: "W1", sessions: 310 },
+    { week: "W2", sessions: 340 },
+    { week: "W3", sessions: 290 },
+    { week: "W4", sessions: 410 },
+    { week: "W5", sessions: 380 },
+    { week: "W6", sessions: 450 },
+    { week: "W7", sessions: 420 },
+    { week: "W8", sessions: 490 },
+    { week: "W9", sessions: 510 },
+    { week: "W10", sessions: 470 },
+    { week: "W11", sessions: 560 },
+    { week: "W12", sessions: 590 },
+  ],
+}
+
 export const MOCK_INTEGRATIONS = [
   {
     provider: "STRIPE",

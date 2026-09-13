@@ -81,6 +81,7 @@ enum Provider {
   KIT
   MANYCHAT
   CALENDLY
+  GOOGLE_ANALYTICS
   // Extension point: INSTAGRAM, TIKTOK, STAN_STORE added here later
 }
 
@@ -153,6 +154,8 @@ enum FunnelEventType {
   PURCHASED
   UNSUBSCRIBED
   REFUNDED
+  WEBSITE_VISIT
+  PAGE_VIEW
 }
 
 enum EventSource {
@@ -160,6 +163,7 @@ enum EventSource {
   KIT
   STRIPE
   CALENDLY
+  GOOGLE_ANALYTICS
   // Extension point: INSTAGRAM, TIKTOK, YOUTUBE added here later
 }
 

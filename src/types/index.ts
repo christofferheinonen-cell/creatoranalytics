@@ -1,6 +1,6 @@
 // Shared TypeScript types for the application
 
-export type Provider = "STRIPE" | "KIT" | "MANYCHAT" | "CALENDLY"
+export type Provider = "STRIPE" | "KIT" | "MANYCHAT" | "CALENDLY" | "GOOGLE_ANALYTICS"
 export type AccountStatus = "ACTIVE" | "DISCONNECTED" | "ERROR"
 export type SyncStatus = "RUNNING" | "SUCCESS" | "FAILED" | "PARTIAL"
 
@@ -16,8 +16,34 @@ export type FunnelEventType =
   | "PURCHASED"
   | "UNSUBSCRIBED"
   | "REFUNDED"
+  | "WEBSITE_VISIT"
+  | "PAGE_VIEW"
 
-export type EventSource = "MANYCHAT" | "KIT" | "STRIPE" | "CALENDLY"
+export type EventSource = "MANYCHAT" | "KIT" | "STRIPE" | "CALENDLY" | "GOOGLE_ANALYTICS"
+
+export interface GA4TrafficSource {
+  source: string
+  sessions: number
+  pct: number
+}
+
+export interface GA4TopPage {
+  path: string
+  views: number
+  sessions: number
+}
+
+export interface GA4Summary {
+  sessions: number
+  previousSessions: number
+  users: number
+  previousUsers: number
+  pageViews: number
+  engagementRate: number
+  sources: GA4TrafficSource[]
+  topPages: GA4TopPage[]
+  weeklyData: { week: string; sessions: number }[]
+}
 
 export interface FunnelStage {
   stage: string

@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { ApiKeyDialog } from "./ApiKeyDialog"
 
 interface Props {
-  provider: "STRIPE" | "KIT" | "MANYCHAT" | "CALENDLY"
+  provider: "STRIPE" | "KIT" | "MANYCHAT" | "CALENDLY" | "GOOGLE_ANALYTICS"
   label: string
   description: string
   authType: "oauth" | "apikey"

@@ -6,6 +6,7 @@ import { syncStripe } from "./stripe"
 import { syncKit } from "./kit"
 import { syncManyChat } from "./manychat"
 import { syncCalendly } from "./calendly"
+import { syncGoogleAnalytics } from "./google-analytics"
 import type { SyncResult } from "@/types"
 
 export async function runSyncForAccount(
@@ -44,6 +45,10 @@ export async function runSyncForAccount(
       case "CALENDLY":
         if (!account.accessToken) throw new Error("No access token for Calendly")
         result = await syncCalendly(account.id, await decrypt(account.accessToken), account.userId, since)
+        break
+      case "GOOGLE_ANALYTICS":
+        if (!account.accessToken) throw new Error("No access token for Google Analytics")
+        result = await syncGoogleAnalytics(account.id, account.accessToken, account.userId, since)
         break
       default:
         throw new Error(`Unknown provider: ${account.provider as string}`)

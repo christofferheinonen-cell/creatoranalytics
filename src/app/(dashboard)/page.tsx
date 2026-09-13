@@ -10,8 +10,10 @@ import { RevenueChart } from "@/components/dashboard/RevenueChart"
 import { ConnectedSources } from "@/components/dashboard/ConnectedSources"
 import { RevenuePill } from "@/components/dashboard/RevenuePill"
 import { SetupProgress } from "@/components/dashboard/SetupProgress"
+import { TrafficCard } from "@/components/dashboard/TrafficCard"
+import { fetchGA4LiveSummary } from "@/integrations/google-analytics"
 import { pctChange, formatNumber } from "@/lib/utils"
-import type { ConnectedAccountSummary, Provider } from "@/types"
+import type { ConnectedAccountSummary, Provider, GA4Summary } from "@/types"
 import type { MockBuilderNode } from "@/lib/mock-data"
 
 export const metadata: Metadata = { title: "Dashboard" }
@@ -21,6 +23,7 @@ const PROVIDER_LABELS: Record<Provider, string> = {
   KIT: "Kit (ConvertKit)",
   MANYCHAT: "ManyChat",
   CALENDLY: "Calendly",
+  GOOGLE_ANALYTICS: "Google Analytics 4",
 }
 
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
@@ -86,7 +89,7 @@ export default async function DashboardPage() {
     }),
     prisma.connectedAccount.findMany({
       where: { userId },
-      select: { provider: true, status: true, lastSyncedAt: true },
+      select: { provider: true, status: true, lastSyncedAt: true, accessToken: true },
     }),
     prisma.funnelEvent.groupBy({
       by: ["type", "source"],
@@ -103,6 +106,16 @@ export default async function DashboardPage() {
   const totalRevenue = currentRevenue._sum.value?.toNumber() ?? 0
   const prevRevenue = previousRevenue._sum.value?.toNumber() ?? 0
   const contactsTrend = totalContacts - previousContacts
+
+  // Fetch GA4 live summary if connected
+  const ga4Account = connectedAccounts.find(
+    (a) => a.provider === "GOOGLE_ANALYTICS" && a.status === "ACTIVE" && a.accessToken
+  )
+  const propertyId = process.env.GOOGLE_ANALYTICS_PROPERTY_ID
+  let ga4Summary: GA4Summary | null = null
+  if (ga4Account?.accessToken && propertyId) {
+    ga4Summary = await fetchGA4LiveSummary(ga4Account.accessToken, propertyId)
+  }
 
   const revenueChartData = groupByWeek(revenueEvents)
 
@@ -243,6 +256,7 @@ export default async function DashboardPage() {
       <div className="flex flex-col gap-[18px] min-w-0" style={{ flex: "1 1 300px" }}>
         <RevenuePill totalRevenue={totalRevenue} transactionCount={transactionCount} />
         <ConnectedSources accounts={integrations} sourceShares={sourceShares} />
+        <TrafficCard data={ga4Summary} />
         <SetupProgress steps={setupSteps} />
       </div>
     </div>
